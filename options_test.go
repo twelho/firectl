@@ -42,7 +42,7 @@ func TestToFirecrackerConfig(t *testing.T) {
 		{
 			name: "Invalid metadata",
 			opts: &options{
-				FcMetadata: "{ invalid:json",
+				Metadata: "{ invalid:json",
 			},
 			expectedErr: func(e error) (bool, error) {
 				return strings.HasPrefix(e.Error(), errInvalidMetadata.Error()), errInvalidMetadata
@@ -52,7 +52,7 @@ func TestToFirecrackerConfig(t *testing.T) {
 		{
 			name: "Invalid network config",
 			opts: &options{
-				FcNicConfig: "no-slash",
+				NicConfig: "no-slash",
 			},
 			expectedErr: func(e error) (bool, error) {
 				return e == errInvalidNicConfig, errInvalidNicConfig
@@ -62,8 +62,8 @@ func TestToFirecrackerConfig(t *testing.T) {
 		{
 			name: "Invalid drives",
 			opts: &options{
-				FcNicConfig:        "a/b",
-				FcAdditionalDrives: []string{"/no-suffix"},
+				NicConfig:        "a/b",
+				AdditionalDrives: []string{"/no-suffix"},
 			},
 			expectedErr: func(e error) (bool, error) {
 				return e == errInvalidDriveSpecificationNoSuffix, errInvalidDriveSpecificationNoSuffix
@@ -73,9 +73,9 @@ func TestToFirecrackerConfig(t *testing.T) {
 		{
 			name: "Invalid vsock addr",
 			opts: &options{
-				FcNicConfig:        "a/b",
-				FcAdditionalDrives: []string{tempFile.Name() + ":ro"},
-				FcVsockDevices:     []string{"noCID"},
+				NicConfig:        "a/b",
+				AdditionalDrives: []string{tempFile.Name() + ":ro"},
+				VsockDevices:     []string{"noCID"},
 			},
 			expectedErr: func(e error) (bool, error) {
 				return e == errUnableToParseVsockDevices, errUnableToParseVsockDevices
@@ -85,10 +85,10 @@ func TestToFirecrackerConfig(t *testing.T) {
 		{
 			name: "Invalid fifo config",
 			opts: &options{
-				FcNicConfig:        "a/b",
-				FcAdditionalDrives: []string{tempFile.Name() + ":ro"},
-				FcVsockDevices:     []string{"a:3"},
-				FcFifoLogFile:      tempFile.Name(),
+				NicConfig:        "a/b",
+				AdditionalDrives: []string{tempFile.Name() + ":ro"},
+				VsockDevices:     []string{"a:3"},
+				FifoLogFile:      tempFile.Name(),
 				createFifoFileLogs: func(_ string) (*os.File, error) {
 					return nil, errUnableToCreateFifoLogFile
 				},
@@ -102,7 +102,7 @@ func TestToFirecrackerConfig(t *testing.T) {
 		{
 			name: "socket path provided",
 			opts: &options{
-				FcSocketPath: "/some/path/here",
+				SocketPath: "/some/path/here",
 			},
 			expectedErr: func(e error) (bool, error) {
 				return e == nil, nil
@@ -125,7 +125,7 @@ func TestToFirecrackerConfig(t *testing.T) {
 		{
 			name: "Valid config",
 			opts: &options{
-				FcSocketPath: "valid/path",
+				SocketPath: "valid/path",
 			},
 			expectedErr: func(e error) (bool, error) {
 				return e == nil, nil
@@ -373,10 +373,10 @@ func TestHandleFifos(t *testing.T) {
 		validate     func(options) bool
 	}{
 		{
-			name: "both FcFifoLogFile and FcLogFifo set",
+			name: "both FifoLogFile and LogFifo set",
 			opt: options{
-				FcFifoLogFile: "a",
-				FcLogFifo:     "b",
+				FifoLogFile: "a",
+				LogFifo:     "b",
 			},
 			outWriterNil: true,
 			expectedErr: func(e error) (bool, error) {
@@ -386,9 +386,9 @@ func TestHandleFifos(t *testing.T) {
 			validate:   validateTrue,
 		},
 		{
-			name: "set FcFifoLogFile causing createFifoFileLogs to fail",
+			name: "set FifoLogFile causing createFifoFileLogs to fail",
 			opt: options{
-				FcFifoLogFile: "fail-here",
+				FifoLogFile: "fail-here",
 				createFifoFileLogs: func(_ string) (*os.File, error) {
 					return nil, errUnableToCreateFifoLogFile
 				},
@@ -407,9 +407,9 @@ func TestHandleFifos(t *testing.T) {
 			validate:   validateTrue,
 		},
 		{
-			name: "set FcLogFifo but not FcMetricsFifo",
+			name: "set LogFifo but not MetricsFifo",
 			opt: options{
-				FcLogFifo: "testing",
+				LogFifo: "testing",
 			},
 			outWriterNil: true,
 			expectedErr: func(e error) (bool, error) {
@@ -417,13 +417,13 @@ func TestHandleFifos(t *testing.T) {
 			},
 			numClosers: 1,
 			validate: func(opt options) bool {
-				return strings.HasSuffix(opt.FcMetricsFifo, "fc_metrics_fifo")
+				return strings.HasSuffix(opt.MetricsFifo, "fc_metrics_fifo")
 			},
 		},
 		{
-			name: "set FcMetricsFifo but not FcLogFifo",
+			name: "set MetricsFifo but not LogFifo",
 			opt: options{
-				FcMetricsFifo: "test",
+				MetricsFifo: "test",
 			},
 			outWriterNil: true,
 			expectedErr: func(e error) (bool, error) {
@@ -431,13 +431,13 @@ func TestHandleFifos(t *testing.T) {
 			},
 			numClosers: 1,
 			validate: func(opt options) bool {
-				return strings.HasSuffix(opt.FcLogFifo, "fc_fifo")
+				return strings.HasSuffix(opt.LogFifo, "fc_fifo")
 			},
 		},
 		{
-			name: "set FcFifoLogFile with valid value",
+			name: "set FifoLogFile with valid value",
 			opt: options{
-				FcFifoLogFile:      "value",
+				FifoLogFile:        "value",
 				createFifoFileLogs: createFifoFileLogs,
 			},
 			outWriterNil: false,
@@ -447,9 +447,9 @@ func TestHandleFifos(t *testing.T) {
 			numClosers: 2,
 			validate: func(opt options) bool {
 				// remove fcfifoLogFile that is created
-				os.Remove(opt.FcFifoLogFile)
-				return strings.HasSuffix(opt.FcLogFifo, "fc_fifo") &&
-					strings.HasSuffix(opt.FcMetricsFifo, "fc_metrics_fifo")
+				os.Remove(opt.FifoLogFile)
+				return strings.HasSuffix(opt.LogFifo, "fc_fifo") &&
+					strings.HasSuffix(opt.MetricsFifo, "fc_metrics_fifo")
 			},
 		},
 	}
@@ -493,9 +493,9 @@ func TestGetFirecrackerNetworkingConfig(t *testing.T) {
 			expectedNic: nil,
 		},
 		{
-			name: "non-empty but invalid FcNicConfig",
+			name: "non-empty but invalid NicConfig",
 			opt: options{
-				FcNicConfig: "invalid",
+				NicConfig: "invalid",
 			},
 			expectedErr: func(e error) (bool, error) {
 				return e == errInvalidNicConfig, errInvalidNicConfig
@@ -503,9 +503,9 @@ func TestGetFirecrackerNetworkingConfig(t *testing.T) {
 			expectedNic: nil,
 		},
 		{
-			name: "valid FcNicConfig with mdds set to true",
+			name: "valid NicConfig with mdds set to true",
 			opt: options{
-				FcNicConfig:   "valid/things",
+				NicConfig:     "valid/things",
 				validMetadata: 42,
 			},
 			expectedErr: func(e error) (bool, error) {
@@ -520,9 +520,9 @@ func TestGetFirecrackerNetworkingConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "valid FcNicConfig with mdds set to false",
+			name: "valid NicConfig with mdds set to false",
 			opt: options{
-				FcNicConfig: "valid/things",
+				NicConfig: "valid/things",
 			},
 			expectedErr: func(e error) (bool, error) {
 				return e == nil, nil
@@ -566,9 +566,9 @@ func TestGetBlockDevices(t *testing.T) {
 		expectedDrives []models.Drive
 	}{
 		{
-			name: "invalid FcAdditionalDrives value",
+			name: "invalid AdditionalDrives value",
 			opt: options{
-				FcAdditionalDrives: []string{"ab"},
+				AdditionalDrives: []string{"ab"},
 			},
 			expectedErr: func(e error) (bool, error) {
 				return e == errInvalidDriveSpecificationNoSuffix,
@@ -577,11 +577,11 @@ func TestGetBlockDevices(t *testing.T) {
 			expectedDrives: nil,
 		},
 		{
-			name: "valid FcAdditionalDrives with valid Root drive",
+			name: "valid AdditionalDrives with valid Root drive",
 			opt: options{
-				FcAdditionalDrives: []string{tempFile.Name() + ":ro"},
-				FcRootDrivePath:    tempFile.Name(),
-				FcRootPartUUID:     "UUID",
+				AdditionalDrives: []string{tempFile.Name() + ":ro"},
+				RootDrivePath:    tempFile.Name(),
+				RootPartUUID:     "UUID",
 			},
 			expectedErr: func(e error) (bool, error) {
 				return e == nil, nil

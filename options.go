@@ -45,25 +45,25 @@ func newOptions() *options {
 
 // options represents parameters for running a VM
 type options struct {
-	FcBinary           string
-	FcKernelImage      string
-	FcKernelCmdLine    string
-	FcRootDrivePath    string
-	FcRootPartUUID     string
-	FcAdditionalDrives []string
-	FcNicConfig        string
-	FcVsockDevices     []string
-	FcLogFifo          string
-	FcLogLevel         string
-	FcMetricsFifo      string
-	FcDisableHt        bool
-	FcCPUCount         int64
-	FcCPUTemplate      string
-	FcMemSz            int64
-	FcMetadata         string
-	FcFifoLogFile      string
-	FcSocketPath       string
-	Debug              bool
+	Binary           string
+	KernelImage      string
+	KernelCmdLine    string
+	RootDrivePath    string
+	RootPartUUID     string
+	AdditionalDrives []string
+	NicConfig        string
+	VsockDevices     []string
+	LogFifo          string
+	LogLevel         string
+	MetricsFifo      string
+	DisableHt        bool
+	CPUCount         int64
+	CPUTemplate      string
+	MemSz            int64
+	Metadata         string
+	FifoLogFile      string
+	SocketPath       string
+	Debug            bool
 
 	closers       []func() error
 	validMetadata interface{}
@@ -72,32 +72,32 @@ type options struct {
 }
 
 func (o *options) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&o.FcBinary, "firecracker-binary", "", "Path to firecracker binary. By default: Find it in $PATH")
-	fs.StringVar(&o.FcKernelImage, "kernel", "./vmlinux", "Path to the kernel image")
-	fs.StringVar(&o.FcKernelCmdLine, "kernel-opts", DefaultKernelOpts, "Kernel commandline")
-	fs.StringVar(&o.FcRootDrivePath, "root-drive", "", "Path to root disk image. Required.")
-	fs.StringVar(&o.FcRootPartUUID, "root-partition", "", "Root partition UUID")
-	fs.StringSliceVar(&o.FcAdditionalDrives, "add-drive", nil, "Path to additional drive, suffixed with :ro or :rw, can be specified multiple times")
-	fs.StringVar(&o.FcNicConfig, "tap-device", "", "NIC info, specified as DEVICE/MAC")
-	fs.StringSliceVar(&o.FcVsockDevices, "vsock-device", nil, "Vsock interface, specified as PATH:CID. Multiple OK")
-	fs.StringVar(&o.FcLogFifo, "vmm-log-fifo", "", "FIFO for firecracker logs")
-	fs.StringVar(&o.FcLogLevel, "log-level", "DEBUG", "VMM log level")
-	fs.StringVar(&o.FcMetricsFifo, "metrics-fifo", "", "FIFO for firecracker metrics")
-	fs.BoolVarP(&o.FcDisableHt, "disable-hyperthreading", "t", false, "Disable CPU Hyperthreading")
-	fs.Int64VarP(&o.FcCPUCount, "ncpus", "c", DefaultCPUs, "Number of CPUs")
-	fs.StringVar(&o.FcCPUTemplate, "cpu-template", "", "Firecracker CPU Template (C3 or T2)")
-	fs.Int64VarP(&o.FcMemSz, "memory", "m", DefaultMemory, "VM memory, in MiB")
-	fs.StringVar(&o.FcMetadata, "metadata", "", "Firecracker Metadata for MMDS (json)")
-	fs.StringVarP(&o.FcFifoLogFile, "firecracker-log", "l", "", "Pipes the fifo contents to the specified file")
-	fs.StringVarP(&o.FcSocketPath, "socket-path", "s", "", "Path to use for firecracker socket, defaults to a unique file in in the first existing directory from {$HOME, $TMPDIR, or /tmp}")
+	fs.StringVar(&o.Binary, "firecracker-binary", "", "Path to firecracker binary. By default: Find it in $PATH")
+	fs.StringVar(&o.KernelImage, "kernel", "./vmlinux", "Path to the kernel image")
+	fs.StringVar(&o.KernelCmdLine, "kernel-opts", DefaultKernelOpts, "Kernel commandline")
+	fs.StringVar(&o.RootDrivePath, "root-drive", "", "Path to root disk image. Required.")
+	fs.StringVar(&o.RootPartUUID, "root-partition", "", "Root partition UUID")
+	fs.StringSliceVar(&o.AdditionalDrives, "add-drive", nil, "Path to additional drive, suffixed with :ro or :rw, can be specified multiple times")
+	fs.StringVar(&o.NicConfig, "tap-device", "", "NIC info, specified as DEVICE/MAC")
+	fs.StringSliceVar(&o.VsockDevices, "vsock-device", nil, "Vsock interface, specified as PATH:CID. Multiple OK")
+	fs.StringVar(&o.LogFifo, "vmm-log-fifo", "", "FIFO for firecracker logs")
+	fs.StringVar(&o.LogLevel, "log-level", "DEBUG", "VMM log level")
+	fs.StringVar(&o.MetricsFifo, "metrics-fifo", "", "FIFO for firecracker metrics")
+	fs.BoolVarP(&o.DisableHt, "disable-hyperthreading", "t", false, "Disable CPU Hyperthreading")
+	fs.Int64VarP(&o.CPUCount, "ncpus", "c", DefaultCPUs, "Number of CPUs")
+	fs.StringVar(&o.CPUTemplate, "cpu-template", "", "Firecracker CPU Template (C3 or T2)")
+	fs.Int64VarP(&o.MemSz, "memory", "m", DefaultMemory, "VM memory, in MiB")
+	fs.StringVar(&o.Metadata, "metadata", "", "Firecracker Metadata for MMDS (json)")
+	fs.StringVarP(&o.FifoLogFile, "firecracker-log", "l", "", "Pipes the fifo contents to the specified file")
+	fs.StringVarP(&o.SocketPath, "socket-path", "s", "", "Path to use for firecracker socket, defaults to a unique file in in the first existing directory from {$HOME, $TMPDIR, or /tmp}")
 	fs.BoolVarP(&o.Debug, "debug", "d", false, "Disable CPU Hyperthreading")
 }
 
 // Converts options to a usable firecracker config
 func (opts *options) ToFirecrackerConfig() (*firecracker.Config, error) {
 	// validate metadata json
-	if opts.FcMetadata != "" {
-		if err := json.Unmarshal([]byte(opts.FcMetadata), &opts.validMetadata); err != nil {
+	if opts.Metadata != "" {
+		if err := json.Unmarshal([]byte(opts.Metadata), &opts.validMetadata); err != nil {
 			return nil, errors.Wrap(err, errInvalidMetadata.Error())
 		}
 	}
@@ -113,7 +113,7 @@ func (opts *options) ToFirecrackerConfig() (*firecracker.Config, error) {
 	}
 
 	// vsocks
-	vsocks, err := parseVsocks(opts.FcVsockDevices)
+	vsocks, err := parseVsocks(opts.VsockDevices)
 	if err != nil {
 		return nil, err
 	}
@@ -125,28 +125,28 @@ func (opts *options) ToFirecrackerConfig() (*firecracker.Config, error) {
 	}
 
 	var socketPath string
-	if opts.FcSocketPath != "" {
-		socketPath = opts.FcSocketPath
+	if opts.SocketPath != "" {
+		socketPath = opts.SocketPath
 	} else {
 		socketPath = getSocketPath()
 	}
 
 	return &firecracker.Config{
 		SocketPath:        socketPath,
-		LogFifo:           opts.FcLogFifo,
-		LogLevel:          opts.FcLogLevel,
-		MetricsFifo:       opts.FcMetricsFifo,
+		LogFifo:           opts.LogFifo,
+		LogLevel:          opts.LogLevel,
+		MetricsFifo:       opts.MetricsFifo,
 		FifoLogWriter:     fifo,
-		KernelImagePath:   opts.FcKernelImage,
-		KernelArgs:        opts.FcKernelCmdLine,
+		KernelImagePath:   opts.KernelImage,
+		KernelArgs:        opts.KernelCmdLine,
 		Drives:            blockDevices,
 		NetworkInterfaces: NICs,
 		VsockDevices:      vsocks,
 		MachineCfg: models.MachineConfiguration{
-			VcpuCount:   opts.FcCPUCount,
-			CPUTemplate: models.CPUTemplate(opts.FcCPUTemplate),
-			HtEnabled:   !opts.FcDisableHt,
-			MemSizeMib:  opts.FcMemSz,
+			VcpuCount:   opts.CPUCount,
+			CPUTemplate: models.CPUTemplate(opts.CPUTemplate),
+			HtEnabled:   !opts.DisableHt,
+			MemSizeMib:  opts.MemSz,
 		},
 		Debug: opts.Debug,
 	}, nil
@@ -154,8 +154,8 @@ func (opts *options) ToFirecrackerConfig() (*firecracker.Config, error) {
 
 func (opts *options) getNetwork() ([]firecracker.NetworkInterface, error) {
 	var NICs []firecracker.NetworkInterface
-	if len(opts.FcNicConfig) > 0 {
-		tapDev, tapMacAddr, err := parseNicConfig(opts.FcNicConfig)
+	if len(opts.NicConfig) > 0 {
+		tapDev, tapMacAddr, err := parseNicConfig(opts.NicConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -173,16 +173,16 @@ func (opts *options) getNetwork() ([]firecracker.NetworkInterface, error) {
 
 // constructs a list of drives from the options config
 func (opts *options) getBlockDevices() ([]models.Drive, error) {
-	blockDevices, err := parseBlockDevices(opts.FcAdditionalDrives)
+	blockDevices, err := parseBlockDevices(opts.AdditionalDrives)
 	if err != nil {
 		return nil, err
 	}
 	rootDrive := models.Drive{
 		DriveID:      firecracker.String("1"),
-		PathOnHost:   &opts.FcRootDrivePath,
+		PathOnHost:   &opts.RootDrivePath,
 		IsRootDevice: firecracker.Bool(true),
 		IsReadOnly:   firecracker.Bool(false),
-		Partuuid:     opts.FcRootPartUUID,
+		Partuuid:     opts.RootPartUUID,
 	}
 	blockDevices = append(blockDevices, rootDrive)
 	return blockDevices, nil
@@ -200,32 +200,32 @@ func (opts *options) handleFifos() (io.Writer, error) {
 	var err error
 	var fifo io.WriteCloser
 
-	if len(opts.FcFifoLogFile) > 0 {
-		if len(opts.FcLogFifo) > 0 {
+	if len(opts.FifoLogFile) > 0 {
+		if len(opts.LogFifo) > 0 {
 			return nil, errConflictingLogOpts
 		}
 		generateFifoFilename = true
 		// if a fifo log file was specified via the CLI then we need to check if
 		// metric fifo was also specified. If not, we will then generate that fifo
-		if len(opts.FcMetricsFifo) == 0 {
+		if len(opts.MetricsFifo) == 0 {
 			generateMetricFifoFilename = true
 		}
-		if fifo, err = opts.createFifoFileLogs(opts.FcFifoLogFile); err != nil {
+		if fifo, err = opts.createFifoFileLogs(opts.FifoLogFile); err != nil {
 			return nil, errors.Wrap(err, errUnableToCreateFifoLogFile.Error())
 		}
 		opts.addCloser(func() error {
 			return fifo.Close()
 		})
 
-	} else if len(opts.FcLogFifo) > 0 || len(opts.FcMetricsFifo) > 0 {
+	} else if len(opts.LogFifo) > 0 || len(opts.MetricsFifo) > 0 {
 		// this checks to see if either one of the fifos was set. If at least one
 		// has been set we check to see if any of the others were not set. If one
 		// isn't set, we will generate the proper file path.
-		if len(opts.FcLogFifo) == 0 {
+		if len(opts.LogFifo) == 0 {
 			generateFifoFilename = true
 		}
 
-		if len(opts.FcMetricsFifo) == 0 {
+		if len(opts.MetricsFifo) == 0 {
 			generateMetricFifoFilename = true
 		}
 	}
@@ -239,11 +239,11 @@ func (opts *options) handleFifos() (io.Writer, error) {
 			return os.RemoveAll(dir)
 		})
 		if generateFifoFilename {
-			opts.FcLogFifo = filepath.Join(dir, "fc_fifo")
+			opts.LogFifo = filepath.Join(dir, "fc_fifo")
 		}
 
 		if generateMetricFifoFilename {
-			opts.FcMetricsFifo = filepath.Join(dir, "fc_metrics_fifo")
+			opts.MetricsFifo = filepath.Join(dir, "fc_metrics_fifo")
 		}
 	}
 

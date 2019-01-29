@@ -79,24 +79,24 @@ func runVMM(ctx context.Context, opts *options) error {
 		firecracker.WithLogger(log.NewEntry(logger)),
 	}
 
-	if len(opts.FcBinary) != 0 {
-		finfo, err := os.Stat(opts.FcBinary)
+	if len(opts.Binary) != 0 {
+		finfo, err := os.Stat(opts.Binary)
 		if os.IsNotExist(err) {
-			return fmt.Errorf("Binary %q does not exist: %v", opts.FcBinary, err)
+			return fmt.Errorf("Binary %q does not exist: %v", opts.Binary, err)
 		}
 
 		if err != nil {
-			return fmt.Errorf("Failed to stat binary, %q: %v", opts.FcBinary, err)
+			return fmt.Errorf("Failed to stat binary, %q: %v", opts.Binary, err)
 		}
 
 		if finfo.IsDir() {
-			return fmt.Errorf("Binary, %q, is a directory", opts.FcBinary)
+			return fmt.Errorf("Binary, %q, is a directory", opts.Binary)
 		} else if finfo.Mode()&executableMask == 0 {
-			return fmt.Errorf("Binary, %q, is not executable. Check permissions of binary", opts.FcBinary)
+			return fmt.Errorf("Binary, %q, is not executable. Check permissions of binary", opts.Binary)
 		}
 
 		cmd := firecracker.VMCommandBuilder{}.
-			WithBin(opts.FcBinary).
+			WithBin(opts.Binary).
 			WithSocketPath(fcCfg.SocketPath).
 			WithStdin(os.Stdin).
 			WithStdout(os.Stdout).
