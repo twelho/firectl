@@ -19,8 +19,8 @@ import (
 	"os"
 
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
-	flags "github.com/jessevdk/go-flags"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/pflag"
 )
 
 const (
@@ -41,21 +41,13 @@ const (
 
 func main() {
 	opts := newOptions()
-	p := flags.NewParser(opts, flags.Default)
-	// if no args just print help
-	if len(os.Args) == 1 {
-		p.WriteHelp(os.Stderr)
+	opts.AddFlags(pflag.CommandLine)
+	pflag.Parse()
+
+	// if no flags just print help
+	if pflag.NFlag() == 0 {
+		pflag.Usage()
 		os.Exit(0)
-	}
-	_, err := p.ParseArgs(os.Args)
-	if err != nil {
-		// ErrHelp indicates that the help message was printed so we
-		// can exit
-		if val, ok := err.(*flags.Error); ok && val.Type == flags.ErrHelp {
-			os.Exit(0)
-		}
-		p.WriteHelp(os.Stderr)
-		os.Exit(1)
 	}
 
 	defer opts.Close()

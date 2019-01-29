@@ -28,6 +28,13 @@ import (
 	models "github.com/firecracker-microvm/firecracker-go-sdk/client/models"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/pflag"
+)
+
+const (
+	DefaultKernelOpts       = "ro console=ttyS0 noapic reboot=k panic=1 pci=off nomodules"
+	DefaultCPUs       int64 = 1
+	DefaultMemory     int64 = 512
 )
 
 func newOptions() *options {
@@ -36,31 +43,54 @@ func newOptions() *options {
 	}
 }
 
+// options represents parameters for running a VM
 type options struct {
-	FcBinary           string   `long:"firecracker-binary" description:"Path to firecracker binary"`
-	FcKernelImage      string   `long:"kernel" description:"Path to the kernel image" default:"./vmlinux"`
-	FcKernelCmdLine    string   `long:"kernel-opts" description:"Kernel commandline" default:"ro console=ttyS0 noapic reboot=k panic=1 pci=off nomodules"`
-	FcRootDrivePath    string   `long:"root-drive" description:"Path to root disk image"`
-	FcRootPartUUID     string   `long:"root-partition" description:"Root partition UUID"`
-	FcAdditionalDrives []string `long:"add-drive" description:"Path to additional drive, suffixed with :ro or :rw, can be specified multiple times"`
-	FcNicConfig        string   `long:"tap-device" description:"NIC info, specified as DEVICE/MAC"`
-	FcVsockDevices     []string `long:"vsock-device" description:"Vsock interface, specified as PATH:CID. Multiple OK"`
-	FcLogFifo          string   `long:"vmm-log-fifo" description:"FIFO for firecracker logs"`
-	FcLogLevel         string   `long:"log-level" description:"vmm log level" default:"Debug"`
-	FcMetricsFifo      string   `long:"metrics-fifo" description:"FIFO for firecracker metrics"`
-	FcDisableHt        bool     `long:"disable-hyperthreading" short:"t" description:"Disable CPU Hyperthreading"`
-	FcCPUCount         int64    `long:"ncpus" short:"c" description:"Number of CPUs" default:"1"`
-	FcCPUTemplate      string   `long:"cpu-template" description:"Firecracker CPU Template (C3 or T2)"`
-	FcMemSz            int64    `long:"memory" short:"m" description:"VM memory, in MiB" default:"512"`
-	FcMetadata         string   `long:"metadata" description:"Firecracker Metadata for MMDS (json)"`
-	FcFifoLogFile      string   `long:"firecracker-log" short:"l" description:"pipes the fifo contents to the specified file"`
-	FcSocketPath       string   `long:"socket-path" short:"s" description:"path to use for firecracker socket, defaults to a unique file in in the first existing directory from {$HOME, $TMPDIR, or /tmp}"`
-	Debug              bool     `long:"debug" short:"d" description:"Enable debug output"`
+	FcBinary           string
+	FcKernelImage      string
+	FcKernelCmdLine    string
+	FcRootDrivePath    string
+	FcRootPartUUID     string
+	FcAdditionalDrives []string
+	FcNicConfig        string
+	FcVsockDevices     []string
+	FcLogFifo          string
+	FcLogLevel         string
+	FcMetricsFifo      string
+	FcDisableHt        bool
+	FcCPUCount         int64
+	FcCPUTemplate      string
+	FcMemSz            int64
+	FcMetadata         string
+	FcFifoLogFile      string
+	FcSocketPath       string
+	Debug              bool
 
 	closers       []func() error
 	validMetadata interface{}
 
 	createFifoFileLogs func(fifoPath string) (*os.File, error)
+}
+
+func (o *options) AddFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&o.FcBinary, "firecracker-binary", "", "Path to firecracker binary. By default: Find it in $PATH")
+	fs.StringVar(&o.FcKernelImage, "kernel", "./vmlinux", "Path to the kernel image")
+	fs.StringVar(&o.FcKernelCmdLine, "kernel-opts", DefaultKernelOpts, "Kernel commandline")
+	fs.StringVar(&o.FcRootDrivePath, "root-drive", "", "Path to root disk image. Required.")
+	fs.StringVar(&o.FcRootPartUUID, "root-partition", "", "Root partition UUID")
+	fs.StringSliceVar(&o.FcAdditionalDrives, "add-drive", nil, "Path to additional drive, suffixed with :ro or :rw, can be specified multiple times")
+	fs.StringVar(&o.FcNicConfig, "tap-device", "", "NIC info, specified as DEVICE/MAC")
+	fs.StringSliceVar(&o.FcVsockDevices, "vsock-device", nil, "Vsock interface, specified as PATH:CID. Multiple OK")
+	fs.StringVar(&o.FcLogFifo, "vmm-log-fifo", "", "FIFO for firecracker logs")
+	fs.StringVar(&o.FcLogLevel, "log-level", "DEBUG", "VMM log level")
+	fs.StringVar(&o.FcMetricsFifo, "metrics-fifo", "", "FIFO for firecracker metrics")
+	fs.BoolVarP(&o.FcDisableHt, "disable-hyperthreading", "t", false, "Disable CPU Hyperthreading")
+	fs.Int64VarP(&o.FcCPUCount, "ncpus", "c", DefaultCPUs, "Number of CPUs")
+	fs.StringVar(&o.FcCPUTemplate, "cpu-template", "", "Firecracker CPU Template (C3 or T2)")
+	fs.Int64VarP(&o.FcMemSz, "memory", "m", DefaultMemory, "VM memory, in MiB")
+	fs.StringVar(&o.FcMetadata, "metadata", "", "Firecracker Metadata for MMDS (json)")
+	fs.StringVarP(&o.FcFifoLogFile, "firecracker-log", "l", "", "Pipes the fifo contents to the specified file")
+	fs.StringVarP(&o.FcSocketPath, "socket-path", "s", "", "Path to use for firecracker socket, defaults to a unique file in in the first existing directory from {$HOME, $TMPDIR, or /tmp}")
+	fs.BoolVarP(&o.Debug, "debug", "d", false, "Disable CPU Hyperthreading")
 }
 
 // Converts options to a usable firecracker config
