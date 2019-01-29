@@ -24,7 +24,7 @@ import (
 	models "github.com/firecracker-microvm/firecracker-go-sdk/client/models"
 )
 
-func TestGetFirecrackerConfig(t *testing.T) {
+func TestToFirecrackerConfig(t *testing.T) {
 	tempFile, err := ioutil.TempFile("", "firectl-test-drive-path")
 	if err != nil {
 		t.Error(err)
@@ -37,7 +37,7 @@ func TestGetFirecrackerConfig(t *testing.T) {
 		name        string
 		opts        *options
 		expectedErr func(error) (bool, error)
-		outConfig   firecracker.Config
+		outConfig   *firecracker.Config
 	}{
 		{
 			name: "Invalid metadata",
@@ -47,7 +47,7 @@ func TestGetFirecrackerConfig(t *testing.T) {
 			expectedErr: func(e error) (bool, error) {
 				return strings.HasPrefix(e.Error(), errInvalidMetadata.Error()), errInvalidMetadata
 			},
-			outConfig: firecracker.Config{},
+			outConfig: nil,
 		},
 		{
 			name: "Invalid network config",
@@ -57,7 +57,7 @@ func TestGetFirecrackerConfig(t *testing.T) {
 			expectedErr: func(e error) (bool, error) {
 				return e == errInvalidNicConfig, errInvalidNicConfig
 			},
-			outConfig: firecracker.Config{},
+			outConfig: nil,
 		},
 		{
 			name: "Invalid drives",
@@ -68,7 +68,7 @@ func TestGetFirecrackerConfig(t *testing.T) {
 			expectedErr: func(e error) (bool, error) {
 				return e == errInvalidDriveSpecificationNoSuffix, errInvalidDriveSpecificationNoSuffix
 			},
-			outConfig: firecracker.Config{},
+			outConfig: nil,
 		},
 		{
 			name: "Invalid vsock addr",
@@ -80,7 +80,7 @@ func TestGetFirecrackerConfig(t *testing.T) {
 			expectedErr: func(e error) (bool, error) {
 				return e == errUnableToParseVsockDevices, errUnableToParseVsockDevices
 			},
-			outConfig: firecracker.Config{},
+			outConfig: nil,
 		},
 		{
 			name: "Invalid fifo config",
@@ -97,7 +97,7 @@ func TestGetFirecrackerConfig(t *testing.T) {
 				return e != nil && strings.HasPrefix(e.Error(), errUnableToCreateFifoLogFile.Error()),
 					errUnableToCreateFifoLogFile
 			},
-			outConfig: firecracker.Config{},
+			outConfig: nil,
 		},
 		{
 			name: "socket path provided",
@@ -107,7 +107,7 @@ func TestGetFirecrackerConfig(t *testing.T) {
 			expectedErr: func(e error) (bool, error) {
 				return e == nil, nil
 			},
-			outConfig: firecracker.Config{
+			outConfig: &firecracker.Config{
 				SocketPath: "/some/path/here",
 				Drives: []models.Drive{
 					models.Drive{
@@ -130,7 +130,7 @@ func TestGetFirecrackerConfig(t *testing.T) {
 			expectedErr: func(e error) (bool, error) {
 				return e == nil, nil
 			},
-			outConfig: firecracker.Config{
+			outConfig: &firecracker.Config{
 				SocketPath: "valid/path",
 				Drives: []models.Drive{
 					models.Drive{
@@ -148,7 +148,7 @@ func TestGetFirecrackerConfig(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			cfg, err := c.opts.getFirecrackerConfig()
+			cfg, err := c.opts.ToFirecrackerConfig()
 			if ok, expected := c.expectedErr(err); !ok {
 				t.Errorf("expected %s but got %s", expected, err)
 			}

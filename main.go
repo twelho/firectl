@@ -60,7 +60,7 @@ func main() {
 // Run a vmm with a given set of options
 func runVMM(ctx context.Context, opts *options) error {
 	// convert options to a firecracker config
-	fcCfg, err := opts.getFirecrackerConfig()
+	fcCfg, err := opts.ToFirecrackerConfig()
 	if err != nil {
 		log.Errorf("Error: %s", err)
 		return err
@@ -106,7 +106,7 @@ func runVMM(ctx context.Context, opts *options) error {
 		machineOpts = append(machineOpts, firecracker.WithProcessRunner(cmd))
 	}
 
-	m, err := firecracker.NewMachine(vmmCtx, fcCfg, machineOpts...)
+	m, err := firecracker.NewMachine(vmmCtx, *fcCfg, machineOpts...)
 	if err != nil {
 		return fmt.Errorf("Failed creating machine: %s", err)
 	}

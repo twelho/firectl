@@ -94,35 +94,34 @@ func (o *options) AddFlags(fs *pflag.FlagSet) {
 }
 
 // Converts options to a usable firecracker config
-func (opts *options) getFirecrackerConfig() (firecracker.Config, error) {
+func (opts *options) ToFirecrackerConfig() (*firecracker.Config, error) {
 	// validate metadata json
 	if opts.FcMetadata != "" {
 		if err := json.Unmarshal([]byte(opts.FcMetadata), &opts.validMetadata); err != nil {
-			return firecracker.Config{},
-				errors.Wrap(err, errInvalidMetadata.Error())
+			return nil, errors.Wrap(err, errInvalidMetadata.Error())
 		}
 	}
 	//setup NICs
 	NICs, err := opts.getNetwork()
 	if err != nil {
-		return firecracker.Config{}, err
+		return nil, err
 	}
 	// BlockDevices
 	blockDevices, err := opts.getBlockDevices()
 	if err != nil {
-		return firecracker.Config{}, err
+		return nil, err
 	}
 
 	// vsocks
 	vsocks, err := parseVsocks(opts.FcVsockDevices)
 	if err != nil {
-		return firecracker.Config{}, err
+		return nil, err
 	}
 
 	//fifos
 	fifo, err := opts.handleFifos()
 	if err != nil {
-		return firecracker.Config{}, err
+		return nil, err
 	}
 
 	var socketPath string
@@ -132,7 +131,7 @@ func (opts *options) getFirecrackerConfig() (firecracker.Config, error) {
 		socketPath = getSocketPath()
 	}
 
-	return firecracker.Config{
+	return &firecracker.Config{
 		SocketPath:        socketPath,
 		LogFifo:           opts.FcLogFifo,
 		LogLevel:          opts.FcLogLevel,
