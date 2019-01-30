@@ -50,6 +50,10 @@ func main() {
 	}
 
 	// convert options to an executable VMM
+	opts.Default()
+	if err := opts.Validate(); err != nil {
+		log.Fatalf(err.Error())
+	}
 	vmm, err := opts.ToVMM()
 	if err != nil {
 		log.Fatalf(err.Error())

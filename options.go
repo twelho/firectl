@@ -15,6 +15,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -61,6 +62,7 @@ type options struct {
 	SocketPath       string
 }
 
+// AddFlags adds the flags for these options to an arbitrary flagset
 func (o *options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.Binary, "firecracker-binary", "", "Path to firecracker binary. By default: Find it in $PATH")
 	fs.StringVar(&o.KernelImage, "kernel", "./vmlinux", "Path to the kernel image")
@@ -80,6 +82,68 @@ func (o *options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.Metadata, "metadata", "", "Firecracker Metadata for MMDS (json)")
 	fs.StringVarP(&o.FifoLogFile, "firecracker-log", "l", "", "Pipes the fifo contents to the specified file")
 	fs.StringVarP(&o.SocketPath, "socket-path", "s", "", "Path to use for firecracker socket, defaults to a unique file in in the first existing directory from {$HOME, $TMPDIR, or /tmp}")
+}
+
+// Default sets the default values for these options
+func (opts *options) Default() {
+	if opts.SocketPath == "" {
+		opts.SocketPath = getSocketPath()
+	}
+	if opts.LogLevel == "" {
+		opts.LogLevel = DefaultLogLevel
+	}
+}
+
+// Validate makes sure that current options are valid
+func (opts *options) Validate() error {
+	// TODO: Add an unit test for this
+	errs := []error{}
+	errs = append(errs, requiredPathOrEmpty(opts.RootDrivePath, "root-drive"))
+	errs = append(errs, requiredArg(opts.RootDrivePath, "root-drive"))
+	errs = append(errs, requiredPathOrEmpty(opts.KernelImage, "kernel"))
+	errs = append(errs, requiredArg(opts.KernelImage, "kernel"))
+	errs = append(errs, requiredPathOrEmpty(opts.SocketPath, "socket-path"))
+	errs = append(errs, requiredPathOrEmpty(opts.FifoLogFile, "firecracker-log"))
+	errs = append(errs, requiredPathOrEmpty(opts.MetricsFifo, "metrics-fifo"))
+	errs = append(errs, requiredPathOrEmpty(opts.LogFifo, "vmm-log-fifo"))
+	errs = append(errs, requiredPathOrEmpty(opts.Binary, "firecracker-binary"))
+	errs = append(errs, mustBePositiveInt(opts.CPUCount, "ncpus"))
+	errs = append(errs, mustBePositiveInt(opts.MemSz, "memory"))
+	return aggregateErrs(errs)
+}
+
+func requiredArg(val, argName string) error {
+	if len(val) == 0 {
+		return errors.Errorf("--%s is a required argument", argName)
+	}
+	return nil
+}
+
+func requiredPathOrEmpty(path, argName string) error {
+	if _, err := os.Stat(path); len(path) > 0 && err != nil {
+		return errors.Wrap(err, fmt.Sprintf("--%s should be a valid path", argName))
+	}
+	return nil
+}
+
+func mustBePositiveInt(val int64, argName string) error {
+	if val <= 0 {
+		return errors.Errorf("--%s must be a number larger than 0", argName)
+	}
+	return nil
+}
+
+func aggregateErrs(errs []error) error {
+	strs := []string{}
+	for _, err := range errs {
+		if err != nil {
+			strs = append(strs, err.Error())
+		}
+	}
+	if len(strs) > 0 {
+		return errors.Errorf("%v", strs)
+	}
+	return nil
 }
 
 // ToVMM converts these  to a usable firecracker config
@@ -114,10 +178,6 @@ func (opts *options) ToVMM() (*VMM, error) {
 			return nil, err
 		}
 		logLevel = log.InfoLevel
-	}
-
-	if opts.SocketPath == "" {
-		opts.SocketPath = getSocketPath()
 	}
 
 	cfg := firecracker.Config{
