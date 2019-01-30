@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 
-	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 )
@@ -58,63 +57,10 @@ func main() {
 		log.Fatalf(err.Error())
 	}
 
-	if err := runVMM(context.Background(), opts.Binary, cfg, opts.validMetadata); err != nil {
+	vmm := NewVMM(opts.Binary, cfg, opts.validMetadata)
+	if err := vmm.Run(context.Background()); err != nil {
 		log.Fatalf(err.Error())
 	}
-}
-
-// Run a vmm with a given set of options
-func runVMM(ctx context.Context, binary string, cfg *firecracker.Config, metadata interface{}) error {
-	logger := log.New()
-
-	if cfg.Debug {
-		log.SetLevel(log.DebugLevel)
-		logger.SetLevel(log.DebugLevel)
-	}
-
-	vmmCtx, vmmCancel := context.WithCancel(ctx)
-	defer vmmCancel()
-
-	machineOpts := []firecracker.Opt{
-		firecracker.WithLogger(log.NewEntry(logger)),
-	}
-
-	if len(binary) != 0 {
-		if err := verifyFileIsExecutable(binary); err != nil {
-			return err
-		}
-
-		cmd := firecracker.VMCommandBuilder{}.
-			WithBin(binary).
-			WithSocketPath(cfg.SocketPath).
-			WithStdin(os.Stdin).
-			WithStdout(os.Stdout).
-			WithStderr(os.Stderr).
-			Build(ctx)
-
-		machineOpts = append(machineOpts, firecracker.WithProcessRunner(cmd))
-	}
-
-	m, err := firecracker.NewMachine(vmmCtx, *cfg, machineOpts...)
-	if err != nil {
-		return fmt.Errorf("Failed creating machine: %s", err)
-	}
-
-	if metadata != nil {
-		m.EnableMetadata(metadata)
-	}
-
-	if err := m.Start(vmmCtx); err != nil {
-		return fmt.Errorf("Failed to start machine: %v", err)
-	}
-	defer m.StopVMM()
-
-	// wait for the VMM to exit
-	if err := m.Wait(vmmCtx); err != nil {
-		return fmt.Errorf("Wait returned an error %s", err)
-	}
-	log.Printf("Start machine was happy")
-	return nil
 }
 
 // verifyFileIsExecutable verifies that the path given points to a binary that is executable
