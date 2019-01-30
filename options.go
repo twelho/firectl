@@ -83,13 +83,12 @@ func (opts *options) AddFlags(fs *pflag.FlagSet) {
 	fs.BoolVarP(&opts.EnableHyperthreading, "enable-hyperthreading", "t", true, "Enable CPU Hyperthreading")
 	fs.StringVarP(&opts.SocketPath, "socket-path", "s", "", "Path to use for firecracker socket, defaults to a unique file in in the first existing directory from {$HOME, $TMPDIR, or /tmp}")
 	fs.StringVar(&opts.Metadata, "metadata", "", "Metadata specified as raw JSON for MMDS")
-	fs.StringVar(&opts.Name, "name", "", "Metadata specified as raw JSON for MMDS")
+	fs.StringVar(&opts.Name, "name", "", "Set a name for the VM. By default a randomly-generated 8 char string")
 	// Logging options
 	fs.StringVarP(&opts.FifoLogFile, "vmm-log-file", "l", "", "Pipes the VMM fifo log to the specified file. Mutually exclusive with --vmm-log-fifo")
 	fs.StringVar(&opts.LogFifo, "vmm-log-fifo", "", "Point to a fifo for firecracker logs. Mutually exclusive with --vmm-log-file. By default a new fifo is created in /tmp")
 	fs.StringVar(&opts.MetricsFifo, "metrics-fifo", "", "Point to a fifo for firecracker metrics. By default a new fifo is created in /tmp")
 	fs.StringVar(&opts.LogLevel, "log-level", DefaultLogLevel, "Set the log level for both firectl and firecracker")
-	fs.StringVar(&opts.Name, "name", "", "Set a name for the VM. By default a randomly-generated 8 char string")
 }
 
 // Default sets the default values for these options
