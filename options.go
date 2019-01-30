@@ -212,7 +212,13 @@ func (opts *options) ToVMM() (*VMM, error) {
 		Debug: strings.ToLower(opts.LogLevel) == "debug",
 	}
 
-	return NewVMM(opts.Binary, cfg, metadata, opts.FifoLogFile, logLevel), nil
+	return &VMM{
+		binary:      opts.Binary,
+		cfg:         cfg,
+		metadata:    metadata,
+		fifoLogFile: opts.FifoLogFile,
+		logLevel:    logLevel,
+	}, nil
 }
 
 func (opts *options) getNetwork(allowMDDS bool) ([]firecracker.NetworkInterface, error) {

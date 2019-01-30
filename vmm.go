@@ -25,20 +25,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// NewVMM creates a VMM object
-func NewVMM(binary string, cfg firecracker.Config, metadata interface{}, fifoLogFile string, logLevel log.Level) *VMM {
-	return &VMM{
-		binary:      binary,
-		cfg:         cfg,
-		metadata:    metadata,
-		fifoLogFile: fifoLogFile,
-		logLevel:    logLevel,
-	}
-}
-
 // VMM represents a virtual machine monitor
 type VMM struct {
-	ctx         context.Context
 	binary      string
 	cfg         firecracker.Config
 	metadata    interface{}
