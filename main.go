@@ -52,22 +52,22 @@ func main() {
 
 	defer opts.Close()
 
-	if err := runVMM(context.Background(), opts); err != nil {
+	// convert options to a firecracker config
+	cfg, err := opts.ToFirecrackerConfig()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+
+	if err := runVMM(context.Background(), opts.Binary, cfg, opts.validMetadata); err != nil {
 		log.Fatalf(err.Error())
 	}
 }
 
 // Run a vmm with a given set of options
-func runVMM(ctx context.Context, opts *options) error {
-	// convert options to a firecracker config
-	fcCfg, err := opts.ToFirecrackerConfig()
-	if err != nil {
-		log.Errorf("Error: %s", err)
-		return err
-	}
+func runVMM(ctx context.Context, binary string, cfg *firecracker.Config, metadata interface{}) error {
 	logger := log.New()
 
-	if opts.Debug {
+	if cfg.Debug {
 		log.SetLevel(log.DebugLevel)
 		logger.SetLevel(log.DebugLevel)
 	}
@@ -79,25 +79,25 @@ func runVMM(ctx context.Context, opts *options) error {
 		firecracker.WithLogger(log.NewEntry(logger)),
 	}
 
-	if len(opts.Binary) != 0 {
-		finfo, err := os.Stat(opts.Binary)
+	if len(binary) != 0 {
+		finfo, err := os.Stat(binary)
 		if os.IsNotExist(err) {
-			return fmt.Errorf("Binary %q does not exist: %v", opts.Binary, err)
+			return fmt.Errorf("Binary %q does not exist: %v", binary, err)
 		}
 
 		if err != nil {
-			return fmt.Errorf("Failed to stat binary, %q: %v", opts.Binary, err)
+			return fmt.Errorf("Failed to stat binary, %q: %v", binary, err)
 		}
 
 		if finfo.IsDir() {
-			return fmt.Errorf("Binary, %q, is a directory", opts.Binary)
+			return fmt.Errorf("Binary, %q, is a directory", binary)
 		} else if finfo.Mode()&executableMask == 0 {
-			return fmt.Errorf("Binary, %q, is not executable. Check permissions of binary", opts.Binary)
+			return fmt.Errorf("Binary, %q, is not executable. Check permissions of binary", binary)
 		}
 
 		cmd := firecracker.VMCommandBuilder{}.
-			WithBin(opts.Binary).
-			WithSocketPath(fcCfg.SocketPath).
+			WithBin(binary).
+			WithSocketPath(cfg.SocketPath).
 			WithStdin(os.Stdin).
 			WithStdout(os.Stdout).
 			WithStderr(os.Stderr).
@@ -106,13 +106,13 @@ func runVMM(ctx context.Context, opts *options) error {
 		machineOpts = append(machineOpts, firecracker.WithProcessRunner(cmd))
 	}
 
-	m, err := firecracker.NewMachine(vmmCtx, *fcCfg, machineOpts...)
+	m, err := firecracker.NewMachine(vmmCtx, *cfg, machineOpts...)
 	if err != nil {
 		return fmt.Errorf("Failed creating machine: %s", err)
 	}
 
-	if opts.validMetadata != nil {
-		m.EnableMetadata(opts.validMetadata)
+	if metadata != nil {
+		m.EnableMetadata(metadata)
 	}
 
 	if err := m.Start(vmmCtx); err != nil {
