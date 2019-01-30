@@ -80,19 +80,8 @@ func runVMM(ctx context.Context, binary string, cfg *firecracker.Config, metadat
 	}
 
 	if len(binary) != 0 {
-		finfo, err := os.Stat(binary)
-		if os.IsNotExist(err) {
-			return fmt.Errorf("Binary %q does not exist: %v", binary, err)
-		}
-
-		if err != nil {
-			return fmt.Errorf("Failed to stat binary, %q: %v", binary, err)
-		}
-
-		if finfo.IsDir() {
-			return fmt.Errorf("Binary, %q, is a directory", binary)
-		} else if finfo.Mode()&executableMask == 0 {
-			return fmt.Errorf("Binary, %q, is not executable. Check permissions of binary", binary)
+		if err := verifyFileIsExecutable(binary); err != nil {
+			return err
 		}
 
 		cmd := firecracker.VMCommandBuilder{}.
@@ -125,5 +114,23 @@ func runVMM(ctx context.Context, binary string, cfg *firecracker.Config, metadat
 		return fmt.Errorf("Wait returned an error %s", err)
 	}
 	log.Printf("Start machine was happy")
+	return nil
+}
+
+// verifyFileIsExecutable verifies that the path given points to a binary that is executable
+func verifyFileIsExecutable(binary string) error {
+	finfo, err := os.Stat(binary)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("Binary %q does not exist: %v", binary, err)
+	}
+	if err != nil {
+		return fmt.Errorf("Failed to stat binary, %q: %v", binary, err)
+	}
+
+	if finfo.IsDir() {
+		return fmt.Errorf("Binary, %q, is a directory", binary)
+	} else if finfo.Mode()&executableMask == 0 {
+		return fmt.Errorf("Binary, %q, is not executable. Check permissions of binary", binary)
+	}
 	return nil
 }
