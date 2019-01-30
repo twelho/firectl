@@ -57,7 +57,7 @@ type options struct {
 	EnableHyperthreading bool
 	CPUCount             int64
 	CPUTemplate          string
-	MemSz                int64
+	Memory               int64
 	Metadata             string
 	FifoLogFile          string
 	SocketPath           string
@@ -77,7 +77,7 @@ func (opts *options) AddFlags(fs *pflag.FlagSet) {
 	// The machine specification
 	fs.Int64VarP(&opts.CPUCount, "cpus", "c", DefaultCPUs, "Number of CPUs")
 	fs.StringVar(&opts.CPUTemplate, "cpu-template", "", "Firecracker CPU Template (only C3 or T2 supported at the moment)")
-	fs.Int64VarP(&opts.MemSz, "memory", "m", DefaultMemory, "VM RAM memory, in MiB")
+	fs.Int64VarP(&opts.Memory, "memory", "m", DefaultMemory, "VM RAM memory, in MiB")
 	// Runtime options
 	fs.StringVar(&opts.Binary, "firecracker-binary", "", "Path to the firecracker binary. By default: Find it in $PATH")
 	fs.BoolVarP(&opts.EnableHyperthreading, "enable-hyperthreading", "t", true, "Enable CPU Hyperthreading")
@@ -120,7 +120,7 @@ func (opts *options) Validate() error {
 	errs = append(errs, requiredPathOrEmpty(opts.LogFifo, "vmm-log-fifo"))
 	errs = append(errs, requiredPathOrEmpty(opts.Binary, "firecracker-binary"))
 	errs = append(errs, mustBePositiveInt(opts.CPUCount, "cpus"))
-	errs = append(errs, mustBePositiveInt(opts.MemSz, "memory"))
+	errs = append(errs, mustBePositiveInt(opts.Memory, "memory"))
 	return aggregateErrs(errs)
 }
 
@@ -207,7 +207,7 @@ func (opts *options) ToVMM() (*VMM, error) {
 			VcpuCount:   opts.CPUCount,
 			CPUTemplate: models.CPUTemplate(opts.CPUTemplate),
 			HtEnabled:   opts.EnableHyperthreading,
-			MemSizeMib:  opts.MemSz,
+			MemSizeMib:  opts.Memory,
 		},
 		Debug: strings.ToLower(opts.LogLevel) == "debug",
 	}
