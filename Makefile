@@ -17,6 +17,9 @@ all: firectl
 firectl: $(SRCFILES)
 	go build
 
+build-docker:
+	docker run -it --rm -v $(shell pwd):/go/src/github.com/luxas/firectl -w /go/src/github.com/luxas/firectl golang:1.11 make
+
 test:
 	go test -v ./...
 
