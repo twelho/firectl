@@ -59,8 +59,6 @@ type options struct {
 	Metadata         string
 	FifoLogFile      string
 	SocketPath       string
-
-	validMetadata interface{}
 }
 
 func (o *options) AddFlags(fs *pflag.FlagSet) {
@@ -87,13 +85,14 @@ func (o *options) AddFlags(fs *pflag.FlagSet) {
 // ToVMM converts these  to a usable firecracker config
 func (opts *options) ToVMM() (*VMM, error) {
 	// validate metadata json
+	var metadata interface{}
 	if opts.Metadata != "" {
-		if err := json.Unmarshal([]byte(opts.Metadata), &opts.validMetadata); err != nil {
+		if err := json.Unmarshal([]byte(opts.Metadata), &metadata); err != nil {
 			return nil, errors.Wrap(err, errInvalidMetadata.Error())
 		}
 	}
 	//setup NICs
-	NICs, err := opts.getNetwork()
+	NICs, err := opts.getNetwork(metadata != nil)
 	if err != nil {
 		return nil, err
 	}
@@ -144,17 +143,16 @@ func (opts *options) ToVMM() (*VMM, error) {
 		Debug: strings.ToLower(opts.LogLevel) == "debug",
 	}
 
-	return NewVMM(opts.Binary, cfg, opts.validMetadata, opts.FifoLogFile, logLevel), nil
+	return NewVMM(opts.Binary, cfg, metadata, opts.FifoLogFile, logLevel), nil
 }
 
-func (opts *options) getNetwork() ([]firecracker.NetworkInterface, error) {
+func (opts *options) getNetwork(allowMDDS bool) ([]firecracker.NetworkInterface, error) {
 	var NICs []firecracker.NetworkInterface
 	if len(opts.NicConfig) > 0 {
 		tapDev, tapMacAddr, err := parseNicConfig(opts.NicConfig)
 		if err != nil {
 			return nil, err
 		}
-		allowMDDS := opts.validMetadata != nil
 		NICs = []firecracker.NetworkInterface{
 			firecracker.NetworkInterface{
 				MacAddress:  tapMacAddr,

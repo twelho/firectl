@@ -380,8 +380,8 @@ func TestGetFirecrackerNetworkingConfig(t *testing.T) {
 		{
 			name: "valid NicConfig with mdds set to true",
 			opt: options{
-				NicConfig:     "valid/things",
-				validMetadata: 42,
+				NicConfig: "valid/things",
+				Metadata:  `{"foo": "bar"}`,
 			},
 			expectedErr: func(e error) (bool, error) {
 				return e == nil, nil
@@ -414,7 +414,7 @@ func TestGetFirecrackerNetworkingConfig(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			nic, err := c.opt.getNetwork()
+			nic, err := c.opt.getNetwork(c.opt.Metadata != "")
 			if ok, expected := c.expectedErr(err); !ok {
 				t.Errorf("expected %s but got %s", expected, err)
 			}
