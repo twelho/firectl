@@ -24,6 +24,7 @@ import (
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
 	models "github.com/firecracker-microvm/firecracker-go-sdk/client/models"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 )
 
@@ -31,6 +32,7 @@ const (
 	DefaultKernelOpts       = "ro console=ttyS0 noapic reboot=k panic=1 pci=off nomodules"
 	DefaultCPUs       int64 = 1
 	DefaultMemory     int64 = 512
+	DefaultLogLevel         = "INFO"
 )
 
 func newOptions() *options {
@@ -57,9 +59,7 @@ type options struct {
 	Metadata         string
 	FifoLogFile      string
 	SocketPath       string
-	Debug            bool
 
-	closers       []func() error
 	validMetadata interface{}
 }
 
@@ -73,7 +73,7 @@ func (o *options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.NicConfig, "tap-device", "", "NIC info, specified as DEVICE/MAC")
 	fs.StringSliceVar(&o.VsockDevices, "vsock-device", nil, "Vsock interface, specified as PATH:CID. Multiple OK")
 	fs.StringVar(&o.LogFifo, "vmm-log-fifo", "", "FIFO for firecracker logs")
-	fs.StringVar(&o.LogLevel, "log-level", "DEBUG", "VMM log level")
+	fs.StringVar(&o.LogLevel, "log-level", DefaultLogLevel, "VMM log level")
 	fs.StringVar(&o.MetricsFifo, "metrics-fifo", "", "FIFO for firecracker metrics")
 	fs.BoolVarP(&o.DisableHt, "disable-hyperthreading", "t", false, "Disable CPU Hyperthreading")
 	fs.Int64VarP(&o.CPUCount, "ncpus", "c", DefaultCPUs, "Number of CPUs")
@@ -82,7 +82,6 @@ func (o *options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.Metadata, "metadata", "", "Firecracker Metadata for MMDS (json)")
 	fs.StringVarP(&o.FifoLogFile, "firecracker-log", "l", "", "Pipes the fifo contents to the specified file")
 	fs.StringVarP(&o.SocketPath, "socket-path", "s", "", "Path to use for firecracker socket, defaults to a unique file in in the first existing directory from {$HOME, $TMPDIR, or /tmp}")
-	fs.BoolVarP(&o.Debug, "debug", "d", false, "Disable CPU Hyperthreading")
 }
 
 // ToVMM converts these  to a usable firecracker config
@@ -110,6 +109,14 @@ func (opts *options) ToVMM() (*VMM, error) {
 		return nil, err
 	}
 
+	logLevel, err := log.ParseLevel(opts.LogLevel)
+	if err != nil {
+		if opts.LogLevel != "" {
+			return nil, err
+		}
+		logLevel = log.InfoLevel
+	}
+
 	var socketPath string
 	if opts.SocketPath != "" {
 		socketPath = opts.SocketPath
@@ -134,10 +141,10 @@ func (opts *options) ToVMM() (*VMM, error) {
 			HtEnabled:   !opts.DisableHt,
 			MemSizeMib:  opts.MemSz,
 		},
-		Debug: opts.Debug,
+		Debug: strings.ToLower(opts.LogLevel) == "debug",
 	}
 
-	return NewVMM(opts.Binary, cfg, opts.validMetadata, opts.FifoLogFile), nil
+	return NewVMM(opts.Binary, cfg, opts.validMetadata, opts.FifoLogFile, logLevel), nil
 }
 
 func (opts *options) getNetwork() ([]firecracker.NetworkInterface, error) {

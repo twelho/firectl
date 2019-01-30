@@ -26,12 +26,13 @@ import (
 )
 
 // NewVMM creates a VMM object
-func NewVMM(binary string, cfg firecracker.Config, metadata interface{}, fifoLogFile string) *VMM {
+func NewVMM(binary string, cfg firecracker.Config, metadata interface{}, fifoLogFile string, logLevel log.Level) *VMM {
 	return &VMM{
 		binary:      binary,
 		cfg:         cfg,
 		metadata:    metadata,
 		fifoLogFile: fifoLogFile,
+		logLevel:    logLevel,
 	}
 }
 
@@ -42,16 +43,14 @@ type VMM struct {
 	cfg         firecracker.Config
 	metadata    interface{}
 	fifoLogFile string
+	logLevel    log.Level
 	cleanupFns  []func() error
 }
 
 // Run a vmm with a given set of options
 func (vmm *VMM) Run(ctx context.Context) error {
 	logger := log.New()
-
-	if vmm.cfg.Debug {
-		logger.SetLevel(log.DebugLevel)
-	}
+	logger.SetLevel(vmm.logLevel)
 
 	logWriter, err := vmm.handleFifos(createFifoFile)
 	if err != nil {
