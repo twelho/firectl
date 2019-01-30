@@ -116,16 +116,13 @@ func (opts *options) ToVMM() (*VMM, error) {
 		logLevel = log.InfoLevel
 	}
 
-	var socketPath string
-	if opts.SocketPath != "" {
-		socketPath = opts.SocketPath
-	} else {
-		socketPath = getSocketPath()
+	if opts.SocketPath == "" {
+		opts.SocketPath = getSocketPath()
 	}
 
 	cfg := firecracker.Config{
 		// FifoLogWriter will be set based on opts.FifoLogFile later during runtime
-		SocketPath:        socketPath,
+		SocketPath:        opts.SocketPath,
 		LogFifo:           opts.LogFifo,
 		LogLevel:          opts.LogLevel,
 		MetricsFifo:       opts.MetricsFifo,
