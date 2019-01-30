@@ -63,25 +63,25 @@ type options struct {
 }
 
 // AddFlags adds the flags for these options to an arbitrary flagset
-func (o *options) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&o.Binary, "firecracker-binary", "", "Path to firecracker binary. By default: Find it in $PATH")
-	fs.StringVar(&o.KernelImage, "kernel", "./vmlinux", "Path to the kernel image")
-	fs.StringVar(&o.KernelCmdLine, "kernel-opts", DefaultKernelOpts, "Kernel commandline")
-	fs.StringVar(&o.RootDrivePath, "root-drive", "", "Path to root disk image. Required.")
-	fs.StringVar(&o.RootPartUUID, "root-partition", "", "Root partition UUID")
-	fs.StringSliceVar(&o.AdditionalDrives, "add-drive", nil, "Path to additional drive, suffixed with :ro or :rw, can be specified multiple times")
-	fs.StringVar(&o.NicConfig, "tap-device", "", "NIC info, specified as DEVICE/MAC")
-	fs.StringSliceVar(&o.VsockDevices, "vsock-device", nil, "Vsock interface, specified as PATH:CID. Multiple OK")
-	fs.StringVar(&o.LogFifo, "vmm-log-fifo", "", "FIFO for firecracker logs")
-	fs.StringVar(&o.LogLevel, "log-level", DefaultLogLevel, "VMM log level")
-	fs.StringVar(&o.MetricsFifo, "metrics-fifo", "", "FIFO for firecracker metrics")
-	fs.BoolVarP(&o.DisableHt, "disable-hyperthreading", "t", false, "Disable CPU Hyperthreading")
-	fs.Int64VarP(&o.CPUCount, "ncpus", "c", DefaultCPUs, "Number of CPUs")
-	fs.StringVar(&o.CPUTemplate, "cpu-template", "", "Firecracker CPU Template (C3 or T2)")
-	fs.Int64VarP(&o.MemSz, "memory", "m", DefaultMemory, "VM memory, in MiB")
-	fs.StringVar(&o.Metadata, "metadata", "", "Firecracker Metadata for MMDS (json)")
-	fs.StringVarP(&o.FifoLogFile, "firecracker-log", "l", "", "Pipes the fifo contents to the specified file")
-	fs.StringVarP(&o.SocketPath, "socket-path", "s", "", "Path to use for firecracker socket, defaults to a unique file in in the first existing directory from {$HOME, $TMPDIR, or /tmp}")
+func (opts *options) AddFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&opts.Binary, "firecracker-binary", "", "Path to firecracker binary. By default: Find it in $PATH")
+	fs.StringVar(&opts.KernelImage, "kernel", "./vmlinux", "Path to the kernel image")
+	fs.StringVar(&opts.KernelCmdLine, "kernel-opts", DefaultKernelOpts, "Kernel commandline")
+	fs.StringVar(&opts.RootDrivePath, "root-drive", "", "Path to root disk image. Required.")
+	fs.StringVar(&opts.RootPartUUID, "root-partition", "", "Root partition UUID")
+	fs.StringSliceVar(&opts.AdditionalDrives, "add-drive", nil, "Path to additional drive, suffixed with :ro or :rw, can be specified multiple times")
+	fs.StringVar(&opts.NicConfig, "tap-device", "", "NIC info, specified as DEVICE/MAC")
+	fs.StringSliceVar(&opts.VsockDevices, "vsock-device", nil, "Vsock interface, specified as PATH:CID. Multiple OK")
+	fs.StringVar(&opts.LogFifo, "vmm-log-fifo", "", "FIFO for firecracker logs")
+	fs.StringVar(&opts.LogLevel, "log-level", DefaultLogLevel, "VMM log level")
+	fs.StringVar(&opts.MetricsFifo, "metrics-fifo", "", "FIFO for firecracker metrics")
+	fs.BoolVarP(&opts.DisableHt, "disable-hyperthreading", "t", false, "Disable CPU Hyperthreading")
+	fs.Int64VarP(&opts.CPUCount, "ncpus", "c", DefaultCPUs, "Number of CPUs")
+	fs.StringVar(&opts.CPUTemplate, "cpu-template", "", "Firecracker CPU Template (C3 or T2)")
+	fs.Int64VarP(&opts.MemSz, "memory", "m", DefaultMemory, "VM memory, in MiB")
+	fs.StringVar(&opts.Metadata, "metadata", "", "Firecracker Metadata for MMDS (json)")
+	fs.StringVarP(&opts.FifoLogFile, "firecracker-log", "l", "", "Pipes the fifo contents to the specified file")
+	fs.StringVarP(&opts.SocketPath, "socket-path", "s", "", "Path to use for firecracker socket, defaults to a unique file in in the first existing directory from {$HOME, $TMPDIR, or /tmp}")
 }
 
 // Default sets the default values for these options
