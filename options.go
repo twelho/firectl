@@ -316,15 +316,15 @@ func parseVsocks(devices []string) ([]firecracker.VsockDevice, error) {
 	for _, entry := range devices {
 		fields := strings.Split(entry, ":")
 		if len(fields) != 2 || len(fields[0]) == 0 || len(fields[1]) == 0 {
-			return []firecracker.VsockDevice{}, errUnableToParseVsockDevices
+			return nil, errUnableToParseVsockDevices
 		}
-		CID, err := strconv.ParseUint(fields[1], 10, 32)
+		cid, err := strconv.ParseUint(fields[1], 10, 32)
 		if err != nil {
-			return []firecracker.VsockDevice{}, errUnableToParseVsockCID
+			return nil, errUnableToParseVsockCID
 		}
 		dev := firecracker.VsockDevice{
 			Path: fields[0],
-			CID:  uint32(CID),
+			CID:  uint32(cid),
 		}
 		result = append(result, dev)
 	}
