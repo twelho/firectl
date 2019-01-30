@@ -60,6 +60,7 @@ type options struct {
 	Metadata             string
 	FifoLogFile          string
 	SocketPath           string
+	Name                 string
 }
 
 // AddFlags adds the flags for these options to an arbitrary flagset
@@ -73,7 +74,7 @@ func (opts *options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&opts.NicConfig, "tap-device", "", "NIC info, specified as DEVICE/MAC")
 	fs.StringSliceVar(&opts.VsockDevices, "vsock-device", nil, "<Experimental> Vsock interface, specified as PATH:CID. Can be specified multiple times")
 	// The machine specification
-	fs.Int64VarP(&opts.CPUCount, "ncpus", "c", DefaultCPUs, "Number of CPUs")
+	fs.Int64VarP(&opts.CPUCount, "cpus", "c", DefaultCPUs, "Number of CPUs")
 	fs.StringVar(&opts.CPUTemplate, "cpu-template", "", "Firecracker CPU Template (only C3 or T2 supported at the moment)")
 	fs.Int64VarP(&opts.MemSz, "memory", "m", DefaultMemory, "VM RAM memory, in MiB")
 	// Runtime options
@@ -81,6 +82,7 @@ func (opts *options) AddFlags(fs *pflag.FlagSet) {
 	fs.BoolVarP(&opts.EnableHyperthreading, "enable-hyperthreading", "t", true, "Enable CPU Hyperthreading")
 	fs.StringVarP(&opts.SocketPath, "socket-path", "s", "", "Path to use for firecracker socket, defaults to a unique file in in the first existing directory from {$HOME, $TMPDIR, or /tmp}")
 	fs.StringVar(&opts.Metadata, "metadata", "", "Metadata specified as raw JSON for MMDS")
+	fs.StringVar(&opts.Name, "name", "", "Metadata specified as raw JSON for MMDS")
 	// Logging options
 	fs.StringVarP(&opts.FifoLogFile, "vmm-log-file", "l", "", "Pipes the VMM fifo log to the specified file. Mutually exclusive with --vmm-log-fifo")
 	fs.StringVar(&opts.LogFifo, "vmm-log-fifo", "", "Point to a fifo for firecracker logs. Mutually exclusive with --vmm-log-file. By default a new fifo is created in /tmp")
@@ -111,7 +113,7 @@ func (opts *options) Validate() error {
 	errs = append(errs, requiredPathOrEmpty(opts.MetricsFifo, "metrics-fifo"))
 	errs = append(errs, requiredPathOrEmpty(opts.LogFifo, "vmm-log-fifo"))
 	errs = append(errs, requiredPathOrEmpty(opts.Binary, "firecracker-binary"))
-	errs = append(errs, mustBePositiveInt(opts.CPUCount, "ncpus"))
+	errs = append(errs, mustBePositiveInt(opts.CPUCount, "cpus"))
 	errs = append(errs, mustBePositiveInt(opts.MemSz, "memory"))
 	return aggregateErrs(errs)
 }
