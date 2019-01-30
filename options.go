@@ -88,6 +88,7 @@ func (opts *options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&opts.LogFifo, "vmm-log-fifo", "", "Point to a fifo for firecracker logs. Mutually exclusive with --vmm-log-file. By default a new fifo is created in /tmp")
 	fs.StringVar(&opts.MetricsFifo, "metrics-fifo", "", "Point to a fifo for firecracker metrics. By default a new fifo is created in /tmp")
 	fs.StringVar(&opts.LogLevel, "log-level", DefaultLogLevel, "Set the log level for both firectl and firecracker")
+	fs.StringVar(&opts.Name, "name", "", "Set a name for the VM. By default a randomly-generated 8 char string")
 }
 
 // Default sets the default values for these options
@@ -97,6 +98,11 @@ func (opts *options) Default() {
 	}
 	if opts.LogLevel == "" {
 		opts.LogLevel = DefaultLogLevel
+	}
+	if opts.Name == "" {
+		randname := make([]byte, 4)
+		rand.Read(randname)
+		opts.Name = fmt.Sprintf("%x", randname)
 	}
 }
 
