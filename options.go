@@ -62,6 +62,7 @@ type options struct {
 	FifoLogFile          string
 	SocketPath           string
 	Name                 string
+	CopyFiles            []string
 }
 
 // AddFlags adds the flags for these options to an arbitrary flagset
@@ -84,6 +85,7 @@ func (opts *options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVarP(&opts.SocketPath, "socket-path", "s", "", "Path to use for firecracker socket, defaults to a unique file in in the first existing directory from {$HOME, $TMPDIR, or /tmp}")
 	fs.StringVar(&opts.Metadata, "metadata", "", "Metadata specified as raw JSON for MMDS")
 	fs.StringVar(&opts.Name, "name", "", "Set a name for the VM. By default a randomly-generated 8 char string")
+	fs.StringSliceVar(&opts.CopyFiles, "copy-files", nil, "Copy files from the host to the guest (e.g. SSH keys, network config files, etc.). Can be specified multiple times")
 	// Logging options
 	fs.StringVarP(&opts.FifoLogFile, "vmm-log-file", "l", "", "Pipes the VMM fifo log to the specified file. Mutually exclusive with --vmm-log-fifo")
 	fs.StringVar(&opts.LogFifo, "vmm-log-fifo", "", "Point to a fifo for firecracker logs. Mutually exclusive with --vmm-log-file. By default a new fifo is created in /tmp")
@@ -110,15 +112,15 @@ func (opts *options) Default() {
 func (opts *options) Validate() error {
 	// TODO: Add an unit test for this
 	errs := []error{}
-	errs = append(errs, requiredPathOrEmpty(opts.RootDrivePath, "root-drive"))
+	errs = append(errs, existingPathOrEmpty(opts.RootDrivePath, "root-drive"))
 	errs = append(errs, requiredArg(opts.RootDrivePath, "root-drive"))
-	errs = append(errs, requiredPathOrEmpty(opts.KernelImage, "kernel"))
+	errs = append(errs, existingPathOrEmpty(opts.KernelImage, "kernel"))
 	errs = append(errs, requiredArg(opts.KernelImage, "kernel"))
-	errs = append(errs, requiredPathOrEmpty(opts.SocketPath, "socket-path"))
-	errs = append(errs, requiredPathOrEmpty(opts.FifoLogFile, "firecracker-log"))
-	errs = append(errs, requiredPathOrEmpty(opts.MetricsFifo, "metrics-fifo"))
-	errs = append(errs, requiredPathOrEmpty(opts.LogFifo, "vmm-log-fifo"))
-	errs = append(errs, requiredPathOrEmpty(opts.Binary, "firecracker-binary"))
+	errs = append(errs, existingPathOrEmpty(opts.Binary, "firecracker-binary"))
+	errs = append(errs, nonExistingPathOrEmpty(opts.SocketPath, "socket-path"))
+	errs = append(errs, nonExistingPathOrEmpty(opts.FifoLogFile, "firecracker-log"))
+	errs = append(errs, nonExistingPathOrEmpty(opts.MetricsFifo, "metrics-fifo"))
+	errs = append(errs, nonExistingPathOrEmpty(opts.LogFifo, "vmm-log-fifo"))
 	errs = append(errs, mustBePositiveInt(opts.CPUCount, "cpus"))
 	errs = append(errs, mustBePositiveInt(opts.Memory, "memory"))
 	return aggregateErrs(errs)
@@ -131,9 +133,16 @@ func requiredArg(val, argName string) error {
 	return nil
 }
 
-func requiredPathOrEmpty(path, argName string) error {
+func existingPathOrEmpty(path, argName string) error {
 	if _, err := os.Stat(path); len(path) > 0 && err != nil {
-		return errors.Wrap(err, fmt.Sprintf("--%s should be a valid path", argName))
+		return errors.Wrap(err, fmt.Sprintf("--%s must point to an existing file", argName))
+	}
+	return nil
+}
+
+func nonExistingPathOrEmpty(path, argName string) error {
+	if _, err := os.Stat(path); len(path) > 0 && !os.IsNotExist(err) {
+		return errors.Wrap(err, fmt.Sprintf("--%s must not point to an existing file", argName))
 	}
 	return nil
 }
