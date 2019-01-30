@@ -53,7 +53,7 @@ func TestToVMM(t *testing.T) {
 		{
 			name: "Invalid network config",
 			opts: &options{
-				NicConfig: "no-slash",
+				NICConfigs: []string{"a/"},
 			},
 			expectedErr: func(e error) (bool, error) {
 				return e == errInvalidNicConfig, errInvalidNicConfig
@@ -63,7 +63,7 @@ func TestToVMM(t *testing.T) {
 		{
 			name: "Invalid drives",
 			opts: &options{
-				NicConfig:        "a/b",
+				NICConfigs:       []string{"a/b"},
 				AdditionalDrives: []string{"/no-suffix"},
 			},
 			expectedErr: func(e error) (bool, error) {
@@ -74,7 +74,7 @@ func TestToVMM(t *testing.T) {
 		{
 			name: "Invalid vsock addr",
 			opts: &options{
-				NicConfig:        "a/b",
+				NICConfigs:       []string{"a/b"},
 				AdditionalDrives: []string{tempFile.Name() + ":ro"},
 				VsockDevices:     []string{"noCID"},
 			},
@@ -222,39 +222,53 @@ func TestParseBlockDevices(t *testing.T) {
 	}
 }
 
-func TestParseNicConfig(t *testing.T) {
+func TestParseNICConfigs(t *testing.T) {
 	cases := []struct {
 		name      string
 		in        string
-		outDevice string
+		outBridge string
+		outTap    string
 		outMac    string
 		outError  error
 	}{
 		{
-			name:      "valid nic config",
+			name:      "valid nic config, all",
+			in:        "a/b/c",
+			outBridge: "a",
+			outTap:    "b",
+			outMac:    "c",
+			outError:  nil,
+		},
+		{
+			name:      "valid nic config, tap and mac",
 			in:        "a/b",
-			outDevice: "a",
+			outBridge: "",
+			outTap:    "a",
 			outMac:    "b",
+			outError:  nil,
+		},
+		{
+			name:      "valid nic config, bridge",
+			in:        "ab",
+			outBridge: "ab",
+			outTap:    "",
+			outMac:    "",
 			outError:  nil,
 		},
 		{
 			name:      "no macaddr",
 			in:        "a/",
-			outDevice: "",
+			outBridge: "",
+			outTap:    "",
 			outMac:    "",
 			outError:  errInvalidNicConfig,
 		},
-		{
-			name:      "no separater",
-			in:        "ab",
-			outDevice: "",
-			outMac:    "",
-			outError:  errInvalidNicConfig,
-		},
+
 		{
 			name:      "empty nic config",
 			in:        "",
-			outDevice: "",
+			outBridge: "",
+			outTap:    "",
 			outMac:    "",
 			outError:  errInvalidNicConfig,
 		},
@@ -262,11 +276,17 @@ func TestParseNicConfig(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			device, macaddr, err := parseNicConfig(c.in)
-			if device != c.outDevice {
-				t.Errorf("expected device %s but got %s for input %s",
-					c.outDevice,
-					device,
+			bridge, tap, macaddr, err := parseNICConfig(c.in)
+			if bridge != c.outBridge {
+				t.Errorf("expected bridge %s but got %s for input %s",
+					c.outBridge,
+					bridge,
+					c.in)
+			}
+			if tap != c.outTap {
+				t.Errorf("expected tap device %s but got %s for input %s",
+					c.outTap,
+					tap,
 					c.in)
 			}
 			if macaddr != c.outMac {
@@ -362,7 +382,7 @@ func TestGetFirecrackerNetworkingConfig(t *testing.T) {
 		expectedNic []firecracker.NetworkInterface
 	}{
 		{
-			name: "empty FCNicConfig",
+			name: "empty NicConfig",
 			opt:  options{},
 			expectedErr: func(e error) (bool, error) {
 				return e == nil, nil
@@ -370,9 +390,9 @@ func TestGetFirecrackerNetworkingConfig(t *testing.T) {
 			expectedNic: nil,
 		},
 		{
-			name: "non-empty but invalid NicConfig",
+			name: "non-empty but invalid NICConfigs",
 			opt: options{
-				NicConfig: "invalid",
+				NICConfigs: []string{"ab/cd/ef/gh"},
 			},
 			expectedErr: func(e error) (bool, error) {
 				return e == errInvalidNicConfig, errInvalidNicConfig
@@ -380,10 +400,10 @@ func TestGetFirecrackerNetworkingConfig(t *testing.T) {
 			expectedNic: nil,
 		},
 		{
-			name: "valid NicConfig with mdds set to true",
+			name: "valid NICConfigs with mdds set to true",
 			opt: options{
-				NicConfig: "valid/things",
-				Metadata:  `{"foo": "bar"}`,
+				NICConfigs: []string{"valid/things"},
+				Metadata:   `{"foo": "bar"}`,
 			},
 			expectedErr: func(e error) (bool, error) {
 				return e == nil, nil
@@ -397,9 +417,9 @@ func TestGetFirecrackerNetworkingConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "valid NicConfig with mdds set to false",
+			name: "valid NICConfigs with mdds set to false",
 			opt: options{
-				NicConfig: "valid/things",
+				NICConfigs: []string{"valid/things"},
 			},
 			expectedErr: func(e error) (bool, error) {
 				return e == nil, nil

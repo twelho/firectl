@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -48,7 +49,7 @@ type options struct {
 	RootDrivePath        string
 	RootPartUUID         string
 	AdditionalDrives     []string
-	NicConfig            string
+	NICConfigs           []string
 	VsockDevices         []string
 	LogFifo              string
 	LogLevel             string
@@ -71,7 +72,7 @@ func (opts *options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&opts.RootDrivePath, "root-drive", "", "Path to a root disk image, either a ext4 formatted file or a physical device. Required.")
 	fs.StringVar(&opts.RootPartUUID, "root-partition", "", "Root partition UUID")
 	fs.StringSliceVar(&opts.AdditionalDrives, "add-drive", nil, "Path to an additional drive, suffixed with :ro or :rw. Can be specified multiple times")
-	fs.StringVar(&opts.NicConfig, "tap-device", "", "NIC info, specified as DEVICE/MAC")
+	fs.StringSliceVar(&opts.NICConfigs, "add-network", nil, "Create a tap adapter on the host, connect it to ethX in the VM and possibly a bridge on the host. Specified as HOST_BRIDGE/HOST_TAP/GUEST_MAC, HOST_TAP/GUEST_MAC or just HOST_BRIDGE. Defaults to random HOST_TAP/GUEST_MAC. Can be specified multiple times")
 	fs.StringSliceVar(&opts.VsockDevices, "vsock-device", nil, "<Experimental> Vsock interface, specified as PATH:CID. Can be specified multiple times")
 	// The machine specification
 	fs.Int64VarP(&opts.CPUCount, "cpus", "c", DefaultCPUs, "Number of CPUs")
@@ -217,20 +218,49 @@ func (opts *options) ToVMM() (*VMM, error) {
 
 func (opts *options) getNetwork(allowMDDS bool) ([]firecracker.NetworkInterface, error) {
 	var NICs []firecracker.NetworkInterface
-	if len(opts.NicConfig) > 0 {
-		tapDev, tapMacAddr, err := parseNicConfig(opts.NicConfig)
-		if err != nil {
-			return nil, err
-		}
-		NICs = []firecracker.NetworkInterface{
-			firecracker.NetworkInterface{
-				MacAddress:  tapMacAddr,
+	if opts.NICConfigs != nil {
+		for _, nic := range opts.NICConfigs {
+			bridgeDev, tapDev, guestMacAddr, err := parseNICConfig(nic)
+			if err != nil {
+				return nil, err
+			}
+			if len(tapDev) == 0 { // default the tap interface name to fc{name}
+				tapDev = fmt.Sprintf("fc%s", opts.Name)
+			}
+			if len(guestMacAddr) == 0 {
+				parts := make([]byte, 5)
+				rand.Read(parts)
+				// always start the MAC addr with ea which implies internal & unicast
+				guestMacAddr = fmt.Sprintf("ea:%x:%x:%x:%x:%x", parts[0], parts[1], parts[2], parts[3], parts[4])
+			}
+			NICs = append(NICs, firecracker.NetworkInterface{
+				MacAddress:  guestMacAddr,
 				HostDevName: tapDev,
 				AllowMDDS:   allowMDDS,
-			},
+			})
+			if len(bridgeDev) != 0 {
+				// only require ip and brctl on host if a bridge was requested for the "easy mode"
+				if err := createTAPAdapter(tapDev); err != nil {
+					return nil, err
+				}
+				if err := connectTAPToBridge(tapDev, bridgeDev); err != nil {
+					return nil, err
+				}
+			}
 		}
 	}
 	return NICs, nil
+}
+
+func createTAPAdapter(tapName string) error {
+	if err := exec.Command("ip", "tuntap", "add", "mode", "tap", tapName).Run(); err != nil {
+		return err
+	}
+	return exec.Command("ip", "link", "set", tapName, "up").Run()
+}
+
+func connectTAPToBridge(tapName, bridgeName string) error {
+	return exec.Command("brctl", "addif", bridgeName, tapName).Run()
 }
 
 // constructs a list of drives from the options config
@@ -287,13 +317,23 @@ func parseBlockDevices(entries []string) ([]models.Drive, error) {
 	return devices, nil
 }
 
-// Given a string of the form DEVICE/MACADDR, return the device name and the mac address, or an error
-func parseNicConfig(cfg string) (string, string, error) {
-	fields := strings.Split(cfg, "/")
-	if len(fields) != 2 || len(fields[0]) == 0 || len(fields[1]) == 0 {
-		return "", "", errInvalidNicConfig
+// Given a string of the form BRIDGE/TAP/MAC, TAP/MAC or BRIDGE, return the appropriate values separately or an error
+func parseNICConfig(str string) (string, string, string, error) {
+	fields := strings.Split(str, "/")
+	for _, field := range fields {
+		if len(field) == 0 {
+			return "", "", "", errInvalidNicConfig
+		}
 	}
-	return fields[0], fields[1], nil
+	switch len(fields) {
+	case 1:
+		return fields[0], "", "", nil
+	case 2:
+		return "", fields[0], fields[1], nil
+	case 3:
+		return fields[0], fields[1], fields[2], nil
+	}
+	return "", "", "", errInvalidNicConfig
 }
 
 // Given a list of string representations of vsock devices,
