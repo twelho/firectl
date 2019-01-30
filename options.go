@@ -15,9 +15,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -27,7 +24,6 @@ import (
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
 	models "github.com/firecracker-microvm/firecracker-go-sdk/client/models"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 )
 
@@ -38,9 +34,7 @@ const (
 )
 
 func newOptions() *options {
-	return &options{
-		createFifoFileLogs: createFifoFileLogs,
-	}
+	return &options{}
 }
 
 // options represents parameters for running a VM
@@ -67,8 +61,6 @@ type options struct {
 
 	closers       []func() error
 	validMetadata interface{}
-
-	createFifoFileLogs func(fifoPath string) (*os.File, error)
 }
 
 func (o *options) AddFlags(fs *pflag.FlagSet) {
@@ -93,8 +85,8 @@ func (o *options) AddFlags(fs *pflag.FlagSet) {
 	fs.BoolVarP(&o.Debug, "debug", "d", false, "Disable CPU Hyperthreading")
 }
 
-// Converts options to a usable firecracker config
-func (opts *options) ToFirecrackerConfig() (*firecracker.Config, error) {
+// ToVMM converts these  to a usable firecracker config
+func (opts *options) ToVMM() (*VMM, error) {
 	// validate metadata json
 	if opts.Metadata != "" {
 		if err := json.Unmarshal([]byte(opts.Metadata), &opts.validMetadata); err != nil {
@@ -118,12 +110,6 @@ func (opts *options) ToFirecrackerConfig() (*firecracker.Config, error) {
 		return nil, err
 	}
 
-	//fifos
-	fifo, err := opts.handleFifos()
-	if err != nil {
-		return nil, err
-	}
-
 	var socketPath string
 	if opts.SocketPath != "" {
 		socketPath = opts.SocketPath
@@ -131,12 +117,12 @@ func (opts *options) ToFirecrackerConfig() (*firecracker.Config, error) {
 		socketPath = getSocketPath()
 	}
 
-	return &firecracker.Config{
+	cfg := firecracker.Config{
+		// FifoLogWriter will be set based on opts.FifoLogFile later during runtime
 		SocketPath:        socketPath,
 		LogFifo:           opts.LogFifo,
 		LogLevel:          opts.LogLevel,
 		MetricsFifo:       opts.MetricsFifo,
-		FifoLogWriter:     fifo,
 		KernelImagePath:   opts.KernelImage,
 		KernelArgs:        opts.KernelCmdLine,
 		Drives:            blockDevices,
@@ -149,7 +135,9 @@ func (opts *options) ToFirecrackerConfig() (*firecracker.Config, error) {
 			MemSizeMib:  opts.MemSz,
 		},
 		Debug: opts.Debug,
-	}, nil
+	}
+
+	return NewVMM(opts.Binary, cfg, opts.validMetadata, opts.FifoLogFile), nil
 }
 
 func (opts *options) getNetwork() ([]firecracker.NetworkInterface, error) {
@@ -186,81 +174,6 @@ func (opts *options) getBlockDevices() ([]models.Drive, error) {
 	}
 	blockDevices = append(blockDevices, rootDrive)
 	return blockDevices, nil
-}
-
-// handleFifos will see if any fifos need to be generated and if a fifo log
-// file should be created.
-func (opts *options) handleFifos() (io.Writer, error) {
-	// these booleans are used to check whether or not the fifo queue or metrics
-	// fifo queue needs to be generated. If any which need to be generated, then
-	// we know we need to create a temporary directory. Otherwise, a temporary
-	// directory does not need to be created.
-	generateFifoFilename := false
-	generateMetricFifoFilename := false
-	var err error
-	var fifo io.WriteCloser
-
-	if len(opts.FifoLogFile) > 0 {
-		if len(opts.LogFifo) > 0 {
-			return nil, errConflictingLogOpts
-		}
-		generateFifoFilename = true
-		// if a fifo log file was specified via the CLI then we need to check if
-		// metric fifo was also specified. If not, we will then generate that fifo
-		if len(opts.MetricsFifo) == 0 {
-			generateMetricFifoFilename = true
-		}
-		if fifo, err = opts.createFifoFileLogs(opts.FifoLogFile); err != nil {
-			return nil, errors.Wrap(err, errUnableToCreateFifoLogFile.Error())
-		}
-		opts.addCloser(func() error {
-			return fifo.Close()
-		})
-
-	} else if len(opts.LogFifo) > 0 || len(opts.MetricsFifo) > 0 {
-		// this checks to see if either one of the fifos was set. If at least one
-		// has been set we check to see if any of the others were not set. If one
-		// isn't set, we will generate the proper file path.
-		if len(opts.LogFifo) == 0 {
-			generateFifoFilename = true
-		}
-
-		if len(opts.MetricsFifo) == 0 {
-			generateMetricFifoFilename = true
-		}
-	}
-
-	if generateFifoFilename || generateMetricFifoFilename {
-		dir, err := ioutil.TempDir(os.TempDir(), "fcfifo")
-		if err != nil {
-			return fifo, fmt.Errorf("Fail to create temporary directory: %v", err)
-		}
-		opts.addCloser(func() error {
-			return os.RemoveAll(dir)
-		})
-		if generateFifoFilename {
-			opts.LogFifo = filepath.Join(dir, "fc_fifo")
-		}
-
-		if generateMetricFifoFilename {
-			opts.MetricsFifo = filepath.Join(dir, "fc_metrics_fifo")
-		}
-	}
-
-	return fifo, nil
-}
-
-func (opts *options) addCloser(c func() error) {
-	opts.closers = append(opts.closers, c)
-}
-
-func (opts *options) Close() {
-	for _, closer := range opts.closers {
-		err := closer()
-		if err != nil {
-			log.Error(err)
-		}
-	}
 }
 
 // given a []string in the form of path:suffix converts to []modesl.Drive
@@ -329,10 +242,6 @@ func parseVsocks(devices []string) ([]firecracker.VsockDevice, error) {
 		result = append(result, dev)
 	}
 	return result, nil
-}
-
-func createFifoFileLogs(fifoPath string) (*os.File, error) {
-	return os.OpenFile(fifoPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 }
 
 // getSocketPath provides a randomized socket path by building a unique fielname

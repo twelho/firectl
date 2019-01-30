@@ -49,15 +49,12 @@ func main() {
 		os.Exit(0)
 	}
 
-	defer opts.Close()
-
-	// convert options to a firecracker config
-	cfg, err := opts.ToFirecrackerConfig()
+	// convert options to an executable VMM
+	vmm, err := opts.ToVMM()
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
 
-	vmm := NewVMM(opts.Binary, cfg, opts.validMetadata)
 	if err := vmm.Run(context.Background()); err != nil {
 		log.Fatalf(err.Error())
 	}

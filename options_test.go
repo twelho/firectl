@@ -24,7 +24,7 @@ import (
 	models "github.com/firecracker-microvm/firecracker-go-sdk/client/models"
 )
 
-func TestToFirecrackerConfig(t *testing.T) {
+func TestToVMM(t *testing.T) {
 	tempFile, err := ioutil.TempFile("", "firectl-test-drive-path")
 	if err != nil {
 		t.Error(err)
@@ -37,7 +37,7 @@ func TestToFirecrackerConfig(t *testing.T) {
 		name        string
 		opts        *options
 		expectedErr func(error) (bool, error)
-		outConfig   *firecracker.Config
+		outVMM      *VMM
 	}{
 		{
 			name: "Invalid metadata",
@@ -47,7 +47,7 @@ func TestToFirecrackerConfig(t *testing.T) {
 			expectedErr: func(e error) (bool, error) {
 				return strings.HasPrefix(e.Error(), errInvalidMetadata.Error()), errInvalidMetadata
 			},
-			outConfig: nil,
+			outVMM: nil,
 		},
 		{
 			name: "Invalid network config",
@@ -57,7 +57,7 @@ func TestToFirecrackerConfig(t *testing.T) {
 			expectedErr: func(e error) (bool, error) {
 				return e == errInvalidNicConfig, errInvalidNicConfig
 			},
-			outConfig: nil,
+			outVMM: nil,
 		},
 		{
 			name: "Invalid drives",
@@ -68,7 +68,7 @@ func TestToFirecrackerConfig(t *testing.T) {
 			expectedErr: func(e error) (bool, error) {
 				return e == errInvalidDriveSpecificationNoSuffix, errInvalidDriveSpecificationNoSuffix
 			},
-			outConfig: nil,
+			outVMM: nil,
 		},
 		{
 			name: "Invalid vsock addr",
@@ -80,24 +80,7 @@ func TestToFirecrackerConfig(t *testing.T) {
 			expectedErr: func(e error) (bool, error) {
 				return e == errUnableToParseVsockDevices, errUnableToParseVsockDevices
 			},
-			outConfig: nil,
-		},
-		{
-			name: "Invalid fifo config",
-			opts: &options{
-				NicConfig:        "a/b",
-				AdditionalDrives: []string{tempFile.Name() + ":ro"},
-				VsockDevices:     []string{"a:3"},
-				FifoLogFile:      tempFile.Name(),
-				createFifoFileLogs: func(_ string) (*os.File, error) {
-					return nil, errUnableToCreateFifoLogFile
-				},
-			},
-			expectedErr: func(e error) (bool, error) {
-				return e != nil && strings.HasPrefix(e.Error(), errUnableToCreateFifoLogFile.Error()),
-					errUnableToCreateFifoLogFile
-			},
-			outConfig: nil,
+			outVMM: nil,
 		},
 		{
 			name: "socket path provided",
@@ -107,18 +90,20 @@ func TestToFirecrackerConfig(t *testing.T) {
 			expectedErr: func(e error) (bool, error) {
 				return e == nil, nil
 			},
-			outConfig: &firecracker.Config{
-				SocketPath: "/some/path/here",
-				Drives: []models.Drive{
-					models.Drive{
-						DriveID:      firecracker.String("1"),
-						PathOnHost:   firecracker.String(""),
-						IsRootDevice: firecracker.Bool(true),
-						IsReadOnly:   firecracker.Bool(false),
+			outVMM: &VMM{
+				cfg: firecracker.Config{
+					SocketPath: "/some/path/here",
+					Drives: []models.Drive{
+						models.Drive{
+							DriveID:      firecracker.String("1"),
+							PathOnHost:   firecracker.String(""),
+							IsRootDevice: firecracker.Bool(true),
+							IsReadOnly:   firecracker.Bool(false),
+						},
 					},
-				},
-				MachineCfg: models.MachineConfiguration{
-					HtEnabled: true,
+					MachineCfg: models.MachineConfiguration{
+						HtEnabled: true,
+					},
 				},
 			},
 		},
@@ -130,30 +115,32 @@ func TestToFirecrackerConfig(t *testing.T) {
 			expectedErr: func(e error) (bool, error) {
 				return e == nil, nil
 			},
-			outConfig: &firecracker.Config{
-				SocketPath: "valid/path",
-				Drives: []models.Drive{
-					models.Drive{
-						DriveID:      firecracker.String("1"),
-						PathOnHost:   firecracker.String(""),
-						IsRootDevice: firecracker.Bool(true),
-						IsReadOnly:   firecracker.Bool(false),
+			outVMM: &VMM{
+				cfg: firecracker.Config{
+					SocketPath: "valid/path",
+					Drives: []models.Drive{
+						models.Drive{
+							DriveID:      firecracker.String("1"),
+							PathOnHost:   firecracker.String(""),
+							IsRootDevice: firecracker.Bool(true),
+							IsReadOnly:   firecracker.Bool(false),
+						},
 					},
-				},
-				MachineCfg: models.MachineConfiguration{
-					HtEnabled: true,
+					MachineCfg: models.MachineConfiguration{
+						HtEnabled: true,
+					},
 				},
 			},
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			cfg, err := c.opts.ToFirecrackerConfig()
+			vmm, err := c.opts.ToVMM()
 			if ok, expected := c.expectedErr(err); !ok {
 				t.Errorf("expected %s but got %s", expected, err)
 			}
-			if !reflect.DeepEqual(c.outConfig, cfg) {
-				t.Errorf("expected %+v but got %+v", c.outConfig, cfg)
+			if !reflect.DeepEqual(c.outVMM, vmm) {
+				t.Errorf("expected %+v but got %+v", c.outVMM, vmm)
 			}
 		})
 
@@ -358,121 +345,6 @@ func TestParseVsocks(t *testing.T) {
 			if !c.expectedErr(err) {
 				t.Errorf("did not expect err: %s", err)
 			}
-		})
-	}
-}
-
-func TestHandleFifos(t *testing.T) {
-	validateTrue := func(options) bool { return true }
-	cases := []struct {
-		name         string
-		opt          options
-		outWriterNil bool
-		expectedErr  func(error) (bool, error)
-		numClosers   int
-		validate     func(options) bool
-	}{
-		{
-			name: "both FifoLogFile and LogFifo set",
-			opt: options{
-				FifoLogFile: "a",
-				LogFifo:     "b",
-			},
-			outWriterNil: true,
-			expectedErr: func(e error) (bool, error) {
-				return e == errConflictingLogOpts, errConflictingLogOpts
-			},
-			numClosers: 0,
-			validate:   validateTrue,
-		},
-		{
-			name: "set FifoLogFile causing createFifoFileLogs to fail",
-			opt: options{
-				FifoLogFile: "fail-here",
-				createFifoFileLogs: func(_ string) (*os.File, error) {
-					return nil, errUnableToCreateFifoLogFile
-				},
-			},
-			outWriterNil: true,
-			expectedErr: func(a error) (bool, error) {
-				if a == nil {
-					return false,
-						errUnableToCreateFifoLogFile
-				}
-				return strings.HasPrefix(a.Error(),
-						errUnableToCreateFifoLogFile.Error()),
-					errUnableToCreateFifoLogFile
-			},
-			numClosers: 0,
-			validate:   validateTrue,
-		},
-		{
-			name: "set LogFifo but not MetricsFifo",
-			opt: options{
-				LogFifo: "testing",
-			},
-			outWriterNil: true,
-			expectedErr: func(e error) (bool, error) {
-				return e == nil, nil
-			},
-			numClosers: 1,
-			validate: func(opt options) bool {
-				return strings.HasSuffix(opt.MetricsFifo, "fc_metrics_fifo")
-			},
-		},
-		{
-			name: "set MetricsFifo but not LogFifo",
-			opt: options{
-				MetricsFifo: "test",
-			},
-			outWriterNil: true,
-			expectedErr: func(e error) (bool, error) {
-				return e == nil, nil
-			},
-			numClosers: 1,
-			validate: func(opt options) bool {
-				return strings.HasSuffix(opt.LogFifo, "fc_fifo")
-			},
-		},
-		{
-			name: "set FifoLogFile with valid value",
-			opt: options{
-				FifoLogFile:        "value",
-				createFifoFileLogs: createFifoFileLogs,
-			},
-			outWriterNil: false,
-			expectedErr: func(e error) (bool, error) {
-				return e == nil, nil
-			},
-			numClosers: 2,
-			validate: func(opt options) bool {
-				// remove fcfifoLogFile that is created
-				os.Remove(opt.FifoLogFile)
-				return strings.HasSuffix(opt.LogFifo, "fc_fifo") &&
-					strings.HasSuffix(opt.MetricsFifo, "fc_metrics_fifo")
-			},
-		},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			w, e := c.opt.handleFifos()
-			if (w == nil && !c.outWriterNil) || (w != nil && c.outWriterNil) {
-				t.Errorf("expected writer to be %v but writer was %v",
-					c.outWriterNil,
-					w == nil)
-			}
-			if ok, expected := c.expectedErr(e); !ok {
-				t.Errorf("expected %s but got %s", expected, e)
-			}
-			if len(c.opt.closers) != c.numClosers {
-				t.Errorf("expected to have %d closers but had %d",
-					c.numClosers,
-					len(c.opt.closers))
-			}
-			if !c.validate(c.opt) {
-				t.Errorf("options did not validate")
-			}
-			c.opt.Close()
 		})
 	}
 }
