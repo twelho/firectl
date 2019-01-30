@@ -169,6 +169,9 @@ func aggregateErrs(errs []error) error {
 
 // ToVMM converts these  to a usable firecracker config
 func (opts *options) ToVMM() (*VMM, error) {
+	b, _ := json.Marshal(opts)
+	log.Debugf("Merged Options struct: %s\n", b)
+
 	// validate metadata json
 	var metadata interface{}
 	if opts.Metadata != "" {
@@ -221,6 +224,9 @@ func (opts *options) ToVMM() (*VMM, error) {
 		Debug: strings.ToLower(opts.LogLevel) == "debug",
 	}
 
+	b, _ = json.Marshal(cfg)
+	log.Debugf("Built Firecracker config: %s\n", b)
+
 	return &VMM{
 		binary:      opts.Binary,
 		cfg:         cfg,
@@ -266,15 +272,22 @@ func (opts *options) getNetwork(allowMDDS bool) ([]firecracker.NetworkInterface,
 	return NICs, nil
 }
 
+func executeCommand(command string, args ...string) error {
+	cmd := exec.Command(command, args...)
+	out, err := cmd.CombinedOutput()
+	log.Debugf("Command %q returned %q\n", strings.Join(cmd.Args, " "), out)
+	return err
+}
+
 func createTAPAdapter(tapName string) error {
-	if err := exec.Command("ip", "tuntap", "add", "mode", "tap", tapName).Run(); err != nil {
+	if err := executeCommand("ip", "tuntap", "add", "mode", "tap", tapName); err != nil {
 		return err
 	}
-	return exec.Command("ip", "link", "set", tapName, "up").Run()
+	return executeCommand("ip", "link", "set", tapName, "up")
 }
 
 func connectTAPToBridge(tapName, bridgeName string) error {
-	return exec.Command("brctl", "addif", bridgeName, tapName).Run()
+	return executeCommand("brctl", "addif", bridgeName, tapName)
 }
 
 // constructs a list of drives from the options config

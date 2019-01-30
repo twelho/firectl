@@ -79,6 +79,7 @@ func (vmm *VMM) Run(ctx context.Context) error {
 		m.EnableMetadata(vmm.metadata)
 	}
 
+	log.Printf("Booting VMM now")
 	if err := m.Start(vmmCtx); err != nil {
 		return errors.Errorf("Failed to start machine: %v", err)
 	}
@@ -88,7 +89,7 @@ func (vmm *VMM) Run(ctx context.Context) error {
 	if err := m.Wait(vmmCtx); err != nil {
 		return errors.Errorf("Wait returned an error %s", err)
 	}
-	log.Printf("Start machine was happy")
+	log.Printf("VMM has stopped successfully")
 	return nil
 }
 
