@@ -86,7 +86,8 @@ func TestToVMM(t *testing.T) {
 		{
 			name: "socket path provided",
 			opts: &options{
-				SocketPath: "/some/path/here",
+				SocketPath:           "/some/path/here",
+				EnableHyperthreading: true,
 			},
 			expectedErr: func(e error) (bool, error) {
 				return e == nil, nil
@@ -112,7 +113,8 @@ func TestToVMM(t *testing.T) {
 		{
 			name: "Valid config",
 			opts: &options{
-				SocketPath: "valid/path",
+				SocketPath:           "valid/path",
+				EnableHyperthreading: true,
 			},
 			expectedErr: func(e error) (bool, error) {
 				return e == nil, nil

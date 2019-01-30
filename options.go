@@ -42,24 +42,24 @@ func newOptions() *options {
 
 // options represents parameters for running a VM
 type options struct {
-	Binary           string
-	KernelImage      string
-	KernelCmdLine    string
-	RootDrivePath    string
-	RootPartUUID     string
-	AdditionalDrives []string
-	NicConfig        string
-	VsockDevices     []string
-	LogFifo          string
-	LogLevel         string
-	MetricsFifo      string
-	DisableHt        bool
-	CPUCount         int64
-	CPUTemplate      string
-	MemSz            int64
-	Metadata         string
-	FifoLogFile      string
-	SocketPath       string
+	Binary               string
+	KernelImage          string
+	KernelCmdLine        string
+	RootDrivePath        string
+	RootPartUUID         string
+	AdditionalDrives     []string
+	NicConfig            string
+	VsockDevices         []string
+	LogFifo              string
+	LogLevel             string
+	MetricsFifo          string
+	EnableHyperthreading bool
+	CPUCount             int64
+	CPUTemplate          string
+	MemSz                int64
+	Metadata             string
+	FifoLogFile          string
+	SocketPath           string
 }
 
 // AddFlags adds the flags for these options to an arbitrary flagset
@@ -78,7 +78,7 @@ func (opts *options) AddFlags(fs *pflag.FlagSet) {
 	fs.Int64VarP(&opts.MemSz, "memory", "m", DefaultMemory, "VM RAM memory, in MiB")
 	// Runtime options
 	fs.StringVar(&opts.Binary, "firecracker-binary", "", "Path to the firecracker binary. By default: Find it in $PATH")
-	fs.BoolVarP(&opts.DisableHt, "disable-hyperthreading", "t", false, "Disable CPU Hyperthreading")
+	fs.BoolVarP(&opts.EnableHyperthreading, "enable-hyperthreading", "t", true, "Enable CPU Hyperthreading")
 	fs.StringVarP(&opts.SocketPath, "socket-path", "s", "", "Path to use for firecracker socket, defaults to a unique file in in the first existing directory from {$HOME, $TMPDIR, or /tmp}")
 	fs.StringVar(&opts.Metadata, "metadata", "", "Metadata specified as raw JSON for MMDS")
 	// Logging options
@@ -198,7 +198,7 @@ func (opts *options) ToVMM() (*VMM, error) {
 		MachineCfg: models.MachineConfiguration{
 			VcpuCount:   opts.CPUCount,
 			CPUTemplate: models.CPUTemplate(opts.CPUTemplate),
-			HtEnabled:   !opts.DisableHt,
+			HtEnabled:   opts.EnableHyperthreading,
 			MemSizeMib:  opts.MemSz,
 		},
 		Debug: strings.ToLower(opts.LogLevel) == "debug",
