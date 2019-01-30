@@ -316,7 +316,7 @@ func TestParseVsocks(t *testing.T) {
 		{
 			name:       "no CID",
 			in:         []string{"a3:"},
-			outDevices: []firecracker.VsockDevice{},
+			outDevices: nil,
 			expectedErr: func(a error) bool {
 				return a == errUnableToParseVsockDevices
 			},
@@ -324,7 +324,7 @@ func TestParseVsocks(t *testing.T) {
 		{
 			name:       "empty vsock",
 			in:         []string{""},
-			outDevices: []firecracker.VsockDevice{},
+			outDevices: nil,
 			expectedErr: func(a error) bool {
 				return a == errUnableToParseVsockDevices
 			},
@@ -332,7 +332,7 @@ func TestParseVsocks(t *testing.T) {
 		{
 			name:       "non-number CID",
 			in:         []string{"a:b"},
-			outDevices: []firecracker.VsockDevice{},
+			outDevices: nil,
 			expectedErr: func(a error) bool {
 				return a == errUnableToParseVsockCID
 			},
@@ -340,7 +340,7 @@ func TestParseVsocks(t *testing.T) {
 		{
 			name:       "no separator",
 			in:         []string{"ae"},
-			outDevices: []firecracker.VsockDevice{},
+			outDevices: nil,
 			expectedErr: func(a error) bool {
 				return a == errUnableToParseVsockDevices
 			},
