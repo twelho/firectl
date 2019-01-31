@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
 	"github.com/pkg/errors"
@@ -43,13 +44,6 @@ func (vmm *VMM) Run(ctx context.Context) error {
 	vmmlogger := log.New()
 	vmmlogger.SetLevel(log.GetLevel())
 
-	logWriter, err := vmm.handleFifos(createFifoFile)
-	if err != nil {
-		return err
-	}
-	defer vmm.Cleanup()
-	vmm.cfg.FifoLogWriter = logWriter
-
 	if err := vmm.createRuntimeDir(); err != nil {
 		return err
 	}
@@ -57,6 +51,13 @@ func (vmm *VMM) Run(ctx context.Context) error {
 	if err := vmm.copyFilesFromHost(); err != nil {
 		return err
 	}
+
+	logWriter, err := vmm.handleFifos(createFifoFile)
+	if err != nil {
+		return err
+	}
+	defer vmm.Cleanup()
+	vmm.cfg.FifoLogWriter = logWriter
 
 	vmmCtx, vmmCancel := context.WithCancel(ctx)
 	defer vmmCancel()
@@ -173,10 +174,24 @@ func (vmm *VMM) copyFilesFromHost() error {
 		if len(files) != 2 {
 			return errors.Errorf("--copy-files arguments must be of the form SOURCE:TARGET")
 		}
-		if err := executeCommand("cp", files[0], files[1]); err != nil {
+		src := files[0]
+		dest := filepath.Join(mntdir, files[1])
+		destDir := filepath.Dir(dest)
+		if _, err := os.Stat(destDir); os.IsNotExist(err) {
+			if err := os.MkdirAll(destDir, 755); err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		}
+		if err := executeCommand("cp", src, dest); err != nil {
 			return err
 		}
 	}
+	if err := executeCommand("sync", vmm.rootDrivePath); err != nil {
+		return err
+	}
+	time.Sleep(1 * time.Second)
 	return executeCommand("umount", mntdir)
 }
 
