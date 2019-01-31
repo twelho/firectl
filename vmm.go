@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
 	"github.com/pkg/errors"
@@ -27,12 +28,14 @@ import (
 
 // VMM represents a virtual machine monitor
 type VMM struct {
-	binary      string
-	name        string
-	cfg         firecracker.Config
-	metadata    interface{}
-	fifoLogFile string
-	cleanupFns  []func() error
+	binary        string
+	name          string
+	rootDrivePath string
+	cfg           firecracker.Config
+	metadata      interface{}
+	fifoLogFile   string
+	copyFiles     []string
+	cleanupFns    []func() error
 }
 
 // Run a vmm with a given set of options
@@ -48,6 +51,10 @@ func (vmm *VMM) Run(ctx context.Context) error {
 	vmm.cfg.FifoLogWriter = logWriter
 
 	if err := vmm.createRuntimeDir(); err != nil {
+		return err
+	}
+
+	if err := vmm.copyFilesFromHost(); err != nil {
 		return err
 	}
 
@@ -151,6 +158,26 @@ func (vmm *VMM) createRuntimeDir() error {
 		return os.RemoveAll(vmdir)
 	})
 	return os.MkdirAll(vmdir, 0755)
+}
+
+func (vmm *VMM) copyFilesFromHost() error {
+	mntdir := filepath.Join(RuntimeDir, vmm.name, "mnt")
+	if err := os.MkdirAll(mntdir, 0755); err != nil {
+		return err
+	}
+	if err := executeCommand("mount", vmm.rootDrivePath, mntdir); err != nil {
+		return err
+	}
+	for _, filePair := range vmm.copyFiles {
+		files := strings.Split(filePair, ":")
+		if len(files) != 2 {
+			return errors.Errorf("--copy-files arguments must be of the form SOURCE:TARGET")
+		}
+		if err := executeCommand("cp", files[0], files[1]); err != nil {
+			return err
+		}
+	}
+	return executeCommand("umount", mntdir)
 }
 
 func (vmm *VMM) addCleanupFn(c func() error) {

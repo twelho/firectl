@@ -230,12 +230,14 @@ func (opts *options) ToVMM() (*VMM, error) {
 	log.Debugf("Built Firecracker config: %s\n", b)
 
 	return &VMM{
-		binary:      opts.Binary,
-		name:        opts.Name,
-		cfg:         cfg,
-		metadata:    metadata,
-		fifoLogFile: opts.FifoLogFile,
-		cleanupFns:  opts.cleanupFns, // inherit the cleanup funcs that were registered here
+		binary:        opts.Binary,
+		name:          opts.Name,
+		rootDrivePath: opts.RootDrivePath,
+		cfg:           cfg,
+		metadata:      metadata,
+		fifoLogFile:   opts.FifoLogFile,
+		copyFiles:     opts.CopyFiles,
+		cleanupFns:    opts.cleanupFns, // inherit the cleanup funcs that were registered here
 	}, nil
 }
 
