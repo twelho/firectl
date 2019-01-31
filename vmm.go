@@ -109,6 +109,8 @@ func (vmm *VMM) handleFifos(createFifoFn func(string) (*os.File, error)) (io.Wri
 	var fifo io.WriteCloser
 
 	if len(vmm.fifoLogFile) > 0 {
+		// If we're writing to a file we don't need the fifo
+		generateFifoFilename = false
 		if fifo, err = createFifoFn(vmm.fifoLogFile); err != nil {
 			return nil, errors.Wrap(err, errUnableToCreateFifoLogFile.Error())
 		}
