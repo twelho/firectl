@@ -40,6 +40,8 @@ const (
 	DefaultMemory int64 = 512
 	// DefaultLogLevel specifies what the default log level is
 	DefaultLogLevel = "INFO"
+	// RuntimeDir specifies which directory firecracker "owns" and can store runtime data in
+	RuntimeDir = "/var/lib/firecracker"
 )
 
 func newOptions() *options {
@@ -87,14 +89,14 @@ func (opts *options) AddFlags(fs *pflag.FlagSet) {
 	// Runtime options
 	fs.StringVar(&opts.Binary, "firecracker-binary", "", "Path to the firecracker binary. By default: Find it in $PATH")
 	fs.BoolVarP(&opts.EnableHyperthreading, "enable-hyperthreading", "t", true, "Enable CPU Hyperthreading")
-	fs.StringVarP(&opts.SocketPath, "socket-path", "s", "", "Path to use for firecracker socket, defaults to a unique file in in the first existing directory from {$HOME, $TMPDIR, or /tmp}")
+	fs.StringVarP(&opts.SocketPath, "socket-path", "s", "", fmt.Sprintf("Path to use for firecracker socket. Defaults to %s/{name}/firecracker.sock", RuntimeDir))
 	fs.StringVar(&opts.Metadata, "metadata", "", "Metadata specified as raw JSON for MMDS")
 	fs.StringVar(&opts.Name, "name", "", "Set a name for the VM. By default a randomly-generated 8 char string")
 	fs.StringSliceVar(&opts.CopyFiles, "copy-files", nil, "Copy files from the host to the guest (e.g. SSH keys, network config files, etc.). Can be specified multiple times")
 	// Logging options
-	fs.StringVarP(&opts.FifoLogFile, "vmm-log-file", "l", "", "Pipes the VMM fifo log to the specified file. Mutually exclusive with --vmm-log-fifo")
-	fs.StringVar(&opts.LogFifo, "vmm-log-fifo", "", "Point to a fifo for firecracker logs. Mutually exclusive with --vmm-log-file. By default a new fifo is created in /tmp")
-	fs.StringVar(&opts.MetricsFifo, "metrics-fifo", "", "Point to a fifo for firecracker metrics. By default a new fifo is created in /tmp")
+	fs.StringVarP(&opts.FifoLogFile, "vmm-log-file", "l", "", fmt.Sprintf("Pipes the VMM fifo log to the specified file. Mutually exclusive with --vmm-log-fifo. By default the file is written to %s/{name}/vmm.log", RuntimeDir))
+	fs.StringVar(&opts.LogFifo, "vmm-log-fifo", "", "Point to a fifo for firecracker logs. Mutually exclusive with --vmm-log-file. By default the log file is used")
+	fs.StringVar(&opts.MetricsFifo, "metrics-fifo", "", fmt.Sprintf("Point to a fifo for firecracker metrics. By default a new fifo is created in %s/{name}/metrics.fifo", RuntimeDir))
 	fs.StringVar(&opts.LogLevel, "log-level", DefaultLogLevel, "Set the log level for both firectl and firecracker")
 }
 
@@ -109,7 +111,12 @@ func (opts *options) Default() {
 		opts.Name = fmt.Sprintf("%x", randname)
 	}
 	if opts.SocketPath == "" {
-		opts.SocketPath = getSocketPath(opts.Name)
+		opts.SocketPath = filepath.Join(RuntimeDir, opts.Name, "firecracker.sock")
+	}
+	if opts.FifoLogFile == "" && opts.LogFifo == "" && opts.MetricsFifo == "" {
+		// If all the options were unset, default to an unique dir in the runtime directory
+		opts.FifoLogFile = filepath.Join(RuntimeDir, opts.Name, "vmm.log")
+		opts.MetricsFifo = filepath.Join(RuntimeDir, opts.Name, "metrics.fifo")
 	}
 }
 
@@ -392,29 +399,6 @@ func parseVsocks(devices []string) ([]firecracker.VsockDevice, error) {
 		result = append(result, dev)
 	}
 	return result, nil
-}
-
-// getSocketPath provides a randomized socket path by building a unique fielname
-// and searching for the existance of directories {$HOME, os.TempDir()} and returning
-// the path with the first directory joined with the unique filename. If we can't
-// find a good path panics.
-func getSocketPath(vmname string) string {
-	filename := strings.Join([]string{
-		".firecracker.sock",
-		strconv.Itoa(os.Getpid()),
-		vmname},
-		"-",
-	)
-	var dir string
-	if d := os.Getenv("HOME"); checkExistsAndDir(d) {
-		dir = d
-	} else if checkExistsAndDir(os.TempDir()) {
-		dir = os.TempDir()
-	} else {
-		panic("Unable to find a location for firecracker socket. 'It's not going to do any good to land on mars if we're stupid.' --Ray Bradbury")
-	}
-
-	return filepath.Join(dir, filename)
 }
 
 // checkExistsAndDir returns true if path exists and is a Dir
