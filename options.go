@@ -274,7 +274,7 @@ func (opts *options) getNetwork(allowMDDS bool) ([]firecracker.NetworkInterface,
 				parts := make([]byte, 5)
 				rand.Read(parts)
 				// always start the MAC addr with ea which implies internal & unicast
-				guestMacAddr = fmt.Sprintf("ea:%x:%x:%x:%x:%x", parts[0], parts[1], parts[2], parts[3], parts[4])
+				guestMacAddr = fmt.Sprintf("ea:%02x:%02x:%02x:%02x:%02x", parts[0], parts[1], parts[2], parts[3], parts[4])
 			}
 			NICs = append(NICs, firecracker.NetworkInterface{
 				MacAddress:  guestMacAddr,
