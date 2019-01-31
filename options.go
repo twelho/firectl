@@ -275,8 +275,12 @@ func (opts *options) getNetwork(allowMDDS bool) ([]firecracker.NetworkInterface,
 func executeCommand(command string, args ...string) error {
 	cmd := exec.Command(command, args...)
 	out, err := cmd.CombinedOutput()
-	log.Debugf("Command %q returned %q\n", strings.Join(cmd.Args, " "), out)
-	return err
+	cmdArgs := strings.Join(cmd.Args, " ")
+	log.Debugf("Command %q returned %q\n", cmdArgs, out)
+	if err != nil {
+		return errors.Wrapf(err, "command %q exited with %q", cmdArgs, out)
+	}
+	return nil
 }
 
 func createTAPAdapter(tapName string) error {
