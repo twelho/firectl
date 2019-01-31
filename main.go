@@ -49,6 +49,13 @@ func main() {
 		os.Exit(0)
 	}
 
+	// Parse the level from flags, and apply it directly
+	logLevel, err := log.ParseLevel(opts.LogLevel)
+	if err != nil {
+		log.Fatalf("couldn't parse loglevel: %v", err.Error())
+	}
+	log.SetLevel(logLevel)
+
 	// convert options to an executable VMM
 	opts.Default()
 	if err := opts.Validate(); err != nil {

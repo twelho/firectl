@@ -103,9 +103,6 @@ func (opts *options) AddFlags(fs *pflag.FlagSet) {
 
 // Default sets the default values for these options
 func (opts *options) Default() {
-	if opts.LogLevel == "" {
-		opts.LogLevel = DefaultLogLevel
-	}
 	if opts.Name == "" {
 		randname := make([]byte, 4)
 		rand.Read(randname)
@@ -209,14 +206,6 @@ func (opts *options) ToVMM() (*VMM, error) {
 		return nil, err
 	}
 
-	logLevel, err := log.ParseLevel(opts.LogLevel)
-	if err != nil {
-		if opts.LogLevel != "" {
-			return nil, err
-		}
-		logLevel = log.InfoLevel
-	}
-
 	// Create the runtime directory for the VM. TODO: Should we clean it up directly?
 	if err := os.MkdirAll(filepath.Join(RuntimeDir, opts.Name), 0755); err != nil {
 		return nil, err
@@ -250,7 +239,6 @@ func (opts *options) ToVMM() (*VMM, error) {
 		cfg:         cfg,
 		metadata:    metadata,
 		fifoLogFile: opts.FifoLogFile,
-		logLevel:    logLevel,
 		cleanupFns:  opts.cleanupFns, // inherit the cleanup funcs that were registered here
 	}, nil
 }

@@ -31,14 +31,13 @@ type VMM struct {
 	cfg         firecracker.Config
 	metadata    interface{}
 	fifoLogFile string
-	logLevel    log.Level
 	cleanupFns  []func() error
 }
 
 // Run a vmm with a given set of options
 func (vmm *VMM) Run(ctx context.Context) error {
-	logger := log.New()
-	logger.SetLevel(vmm.logLevel)
+	vmmlogger := log.New()
+	vmmlogger.SetLevel(log.GetLevel())
 
 	logWriter, err := vmm.handleFifos(createFifoFile)
 	if err != nil {
@@ -51,7 +50,7 @@ func (vmm *VMM) Run(ctx context.Context) error {
 	defer vmmCancel()
 
 	machineOpts := []firecracker.Opt{
-		firecracker.WithLogger(log.NewEntry(logger)),
+		firecracker.WithLogger(log.NewEntry(vmmlogger)),
 	}
 
 	if len(vmm.binary) != 0 {

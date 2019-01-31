@@ -22,7 +22,6 @@ import (
 
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
 	models "github.com/firecracker-microvm/firecracker-go-sdk/client/models"
-	log "github.com/sirupsen/logrus"
 )
 
 func TestToVMM(t *testing.T) {
@@ -107,7 +106,6 @@ func TestToVMM(t *testing.T) {
 						HtEnabled: true,
 					},
 				},
-				logLevel: log.InfoLevel,
 			},
 		},
 		{
@@ -134,7 +132,6 @@ func TestToVMM(t *testing.T) {
 						HtEnabled: true,
 					},
 				},
-				logLevel: log.InfoLevel,
 			},
 		},
 	}
