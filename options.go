@@ -33,10 +33,13 @@ import (
 const (
 	// DefaultKernelOpts specifies what options to set on the kernel's command line
 	// If you want it to boot faster you might want to consider the "ro" (read-only) and "nomodules" (disable module loading) options
-	DefaultKernelOpts       = "console=ttyS0 noapic reboot=k panic=1 pci=off rw"
-	DefaultCPUs       int64 = 1
-	DefaultMemory     int64 = 512
-	DefaultLogLevel         = "INFO"
+	DefaultKernelOpts = "console=ttyS0 noapic reboot=k panic=1 pci=off rw"
+	// DefaultCPUs specifies how many CPUs to enable by default
+	DefaultCPUs int64 = 1
+	// DefaultMemory specifies how much memory to reserve for the VM by default
+	DefaultMemory int64 = 512
+	// DefaultLogLevel specifies what the default log level is
+	DefaultLogLevel = "INFO"
 )
 
 func newOptions() *options {
