@@ -417,17 +417,3 @@ func parseVsocks(devices []string) ([]firecracker.VsockDevice, error) {
 	}
 	return result, nil
 }
-
-// checkExistsAndDir returns true if path exists and is a Dir
-func checkExistsAndDir(path string) bool {
-	// empty
-	if path == "" {
-		return false
-	}
-	// does it exist?
-	if info, err := os.Stat(path); err == nil {
-		// is it a directory?
-		return info.IsDir()
-	}
-	return false
-}
