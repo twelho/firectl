@@ -31,7 +31,9 @@ import (
 )
 
 const (
-	DefaultKernelOpts       = "ro console=ttyS0 noapic reboot=k panic=1 pci=off nomodules"
+	// DefaultKernelOpts specifies what options to set on the kernel's command line
+	// If you want it to boot faster you might want to consider the "ro" (read-only) and "nomodules" (disable module loading) options
+	DefaultKernelOpts       = "console=ttyS0 noapic reboot=k panic=1 pci=off rw"
 	DefaultCPUs       int64 = 1
 	DefaultMemory     int64 = 512
 	DefaultLogLevel         = "INFO"
