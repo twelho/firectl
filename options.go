@@ -217,6 +217,11 @@ func (opts *options) ToVMM() (*VMM, error) {
 		logLevel = log.InfoLevel
 	}
 
+	// Create the runtime directory for the VM. TODO: Should we clean it up directly?
+	if err := os.MkdirAll(filepath.Join(RuntimeDir, opts.Name), 0755); err != nil {
+		return nil, err
+	}
+
 	cfg := firecracker.Config{
 		// FifoLogWriter will be set based on opts.FifoLogFile later during runtime
 		SocketPath:        opts.SocketPath,
