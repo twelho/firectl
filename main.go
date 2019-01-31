@@ -52,15 +52,15 @@ func main() {
 	// convert options to an executable VMM
 	opts.Default()
 	if err := opts.Validate(); err != nil {
-		log.Fatalf(err.Error())
+		log.Fatalf("validating the options failed: %v", err.Error())
 	}
 	vmm, err := opts.ToVMM()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatalf("conversion to runtime config failed: %v", err.Error())
 	}
 
 	if err := vmm.Run(context.Background()); err != nil {
-		log.Fatalf(err.Error())
+		log.Fatalf("running the vmm failed: %v", err.Error())
 	}
 }
 
