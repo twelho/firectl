@@ -14,9 +14,9 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -95,9 +95,6 @@ func (opts *options) AddFlags(fs *pflag.FlagSet) {
 
 // Default sets the default values for these options
 func (opts *options) Default() {
-	if opts.SocketPath == "" {
-		opts.SocketPath = getSocketPath()
-	}
 	if opts.LogLevel == "" {
 		opts.LogLevel = DefaultLogLevel
 	}
@@ -105,6 +102,9 @@ func (opts *options) Default() {
 		randname := make([]byte, 4)
 		rand.Read(randname)
 		opts.Name = fmt.Sprintf("%x", randname)
+	}
+	if opts.SocketPath == "" {
+		opts.SocketPath = getSocketPath(opts.Name)
 	}
 }
 
@@ -389,11 +389,11 @@ func parseVsocks(devices []string) ([]firecracker.VsockDevice, error) {
 // and searching for the existance of directories {$HOME, os.TempDir()} and returning
 // the path with the first directory joined with the unique filename. If we can't
 // find a good path panics.
-func getSocketPath() string {
+func getSocketPath(vmname string) string {
 	filename := strings.Join([]string{
 		".firecracker.sock",
 		strconv.Itoa(os.Getpid()),
-		strconv.Itoa(rand.Intn(1000))},
+		vmname},
 		"-",
 	)
 	var dir string
