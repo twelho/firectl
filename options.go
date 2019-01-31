@@ -206,16 +206,6 @@ func (opts *options) ToVMM() (*VMM, error) {
 		return nil, err
 	}
 
-	// Create the runtime directory for the VM.
-	vmdir := filepath.Join(RuntimeDir, opts.Name)
-	if err := os.MkdirAll(vmdir, 0755); err != nil {
-		return nil, err
-	}
-	// After execution, we can clean it up
-	opts.addCleanupFn(func() error {
-		return os.RemoveAll(vmdir)
-	})
-
 	cfg := firecracker.Config{
 		// FifoLogWriter will be set based on opts.FifoLogFile later during runtime
 		SocketPath:        opts.SocketPath,
@@ -241,6 +231,7 @@ func (opts *options) ToVMM() (*VMM, error) {
 
 	return &VMM{
 		binary:      opts.Binary,
+		name:        opts.Name,
 		cfg:         cfg,
 		metadata:    metadata,
 		fifoLogFile: opts.FifoLogFile,

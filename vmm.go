@@ -28,6 +28,7 @@ import (
 // VMM represents a virtual machine monitor
 type VMM struct {
 	binary      string
+	name        string
 	cfg         firecracker.Config
 	metadata    interface{}
 	fifoLogFile string
@@ -45,6 +46,10 @@ func (vmm *VMM) Run(ctx context.Context) error {
 	}
 	defer vmm.Cleanup()
 	vmm.cfg.FifoLogWriter = logWriter
+
+	if err := vmm.createRuntimeDir(); err != nil {
+		return err
+	}
 
 	vmmCtx, vmmCancel := context.WithCancel(ctx)
 	defer vmmCancel()
@@ -136,6 +141,16 @@ func (vmm *VMM) handleFifos(createFifoFn func(string) (*os.File, error)) (io.Wri
 		}
 	}
 	return fifo, nil
+}
+
+// createRuntimeDir creates the runtime directory for the VM, and registers the deferred cleanup func
+func (vmm *VMM) createRuntimeDir() error {
+	vmdir := filepath.Join(RuntimeDir, vmm.name)
+	// After execution, we can clean it up. This function is run when vmm.Cleanup() is called
+	vmm.addCleanupFn(func() error {
+		return os.RemoveAll(vmdir)
+	})
+	return os.MkdirAll(vmdir, 0755)
 }
 
 func (vmm *VMM) addCleanupFn(c func() error) {
