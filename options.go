@@ -70,6 +70,7 @@ type options struct {
 	SocketPath           string
 	Name                 string
 	CopyFiles            []string
+	cleanupFns           []func() error
 }
 
 // AddFlags adds the flags for these options to an arbitrary flagset
@@ -245,7 +246,12 @@ func (opts *options) ToVMM() (*VMM, error) {
 		metadata:    metadata,
 		fifoLogFile: opts.FifoLogFile,
 		logLevel:    logLevel,
+		cleanupFns:  opts.cleanupFns, // inherit the cleanup funcs that were registered here
 	}, nil
+}
+
+func (opts *options) addCleanupFn(c func() error) {
+	opts.cleanupFns = append(opts.cleanupFns, c)
 }
 
 func (opts *options) getNetwork(allowMDDS bool) ([]firecracker.NetworkInterface, error) {
@@ -279,6 +285,12 @@ func (opts *options) getNetwork(allowMDDS bool) ([]firecracker.NetworkInterface,
 					return nil, err
 				}
 			}
+			// Do this nesting so that although tapDev is mutated every iteration, every tapDev cleanup func has the right param registered
+			opts.addCleanupFn(func(devName string) func() error {
+				return func() error {
+					return executeCommand("ip", "link", "del", devName)
+				}
+			}(tapDev))
 		}
 	}
 	return NICs, nil
