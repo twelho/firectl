@@ -7,7 +7,7 @@ ARG EXTRA=""
 RUN git fetch --tags && git checkout v${VERSION} && \
     make clean && make mrproper
 # Get the desired config, and add the suffix
-COPY Kconfig .config
+COPY Kconfig-${VERSION} .config
 
 # Compile the kernel and install the modules to /lib/modules
 RUN make EXTRAVERSION=${EXTRA} LOCALVERSION= oldconfig
