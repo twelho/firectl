@@ -3,6 +3,15 @@ FROM moul/kernel-builder as kernel
 ARG VERSION="4.14.55"
 ARG EXTRA=""
 
+# Install some utilities that make complains about while compiling the kernel
+RUN apt-get update && \
+    apt-get -y install \
+        libelf-dev \
+        bison \
+        flex \
+    && apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 # Fetch the latest changes and use the desired kernel version
 RUN git fetch --tags && git checkout v${VERSION} && \
     make clean && make mrproper
