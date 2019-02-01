@@ -20,7 +20,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
 	"github.com/pkg/errors"
@@ -191,7 +190,6 @@ func (vmm *VMM) copyFilesFromHost() error {
 	if err := executeCommand("sync", vmm.rootDrivePath); err != nil {
 		return err
 	}
-	time.Sleep(1 * time.Second)
 	return executeCommand("umount", mntdir)
 }
 
