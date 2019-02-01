@@ -107,10 +107,6 @@ func (vmm *VMM) Run(ctx context.Context) error {
 // handleFifos will see if any fifos need to be generated and if a fifo log
 // file should be created.
 func (vmm *VMM) handleFifos(createFifoFn func(string) (*os.File, error)) (io.Writer, error) {
-	if len(vmm.fifoLogFile) > 0 && len(vmm.cfg.LogFifo) > 0 {
-		return nil, errConflictingLogOpts
-	}
-
 	// these booleans are used to check whether or not the fifo queue or metrics
 	// fifo queue needs to be generated. If any which need to be generated, then
 	// we know we need to create a temporary directory. Otherwise, a temporary
@@ -121,8 +117,6 @@ func (vmm *VMM) handleFifos(createFifoFn func(string) (*os.File, error)) (io.Wri
 	var fifo io.WriteCloser
 
 	if len(vmm.fifoLogFile) > 0 {
-		// If we're writing to a file we don't need the fifo
-		generateFifoFilename = false
 		if fifo, err = createFifoFn(vmm.fifoLogFile); err != nil {
 			return nil, errors.Wrap(err, errUnableToCreateFifoLogFile.Error())
 		}

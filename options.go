@@ -109,12 +109,17 @@ func (opts *options) Default() {
 		opts.Name = fmt.Sprintf("%x", randname)
 	}
 	if opts.SocketPath == "" {
-		opts.SocketPath = filepath.Join(RuntimeDir, opts.Name, "firecracker.sock")
+		opts.SocketPath = opts.runtimeFilePath("firecracker.sock")
 	}
-	if opts.FifoLogFile == "" && opts.LogFifo == "" && opts.MetricsFifo == "" {
-		// If all the options were unset, default to an unique dir in the runtime directory
-		opts.FifoLogFile = filepath.Join(RuntimeDir, opts.Name, "vmm.log")
-		opts.MetricsFifo = filepath.Join(RuntimeDir, opts.Name, "metrics.fifo")
+	if opts.FifoLogFile == "" && opts.LogFifo == "" {
+		// Both options need to be specified to firecracker for it to work.
+		// This will make vmm.log be available only, because it has higher precedence.
+		// But opts.LogFifo is always a mandatory value to firecracker
+		opts.FifoLogFile = opts.runtimeFilePath("vmm.log")
+		opts.LogFifo = opts.runtimeFilePath("vmm.fifo")
+	}
+	if opts.MetricsFifo == "" {
+		opts.MetricsFifo = opts.runtimeFilePath("metrics.fifo")
 	}
 }
 
@@ -133,7 +138,20 @@ func (opts *options) Validate() error {
 	errs = append(errs, nonExistingPathOrEmpty(opts.LogFifo, "vmm-log-fifo"))
 	errs = append(errs, mustBePositiveInt(opts.CPUCount, "cpus"))
 	errs = append(errs, mustBePositiveInt(opts.Memory, "memory"))
+
+	// opts.FifoLogFile and opts.LogFifo are mutually exclusive, because LogFifo is ignored if FifoLogFile is set
+	// But still both options need to be given internally to firecracker. So error if this was set incorrectly on the CLI
+	// but allow our own defaults
+	if len(opts.FifoLogFile) > 0 && len(opts.LogFifo) > 0 {
+		if opts.FifoLogFile != opts.runtimeFilePath("vmm.log") && opts.LogFifo != opts.runtimeFilePath("vmm.fifo") {
+			errs = append(errs, errConflictingLogOpts)
+		}
+	}
 	return aggregateErrs(errs)
+}
+
+func (opts *options) runtimeFilePath(filename string) string {
+	return filepath.Join(RuntimeDir, opts.Name, filename)
 }
 
 func requiredArg(val, argName string) error {
