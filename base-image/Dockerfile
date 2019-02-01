@@ -24,7 +24,7 @@ ARG KERNEL_VERSION=""
 ARG KERNEL_EXTRA=""
 ARG UBUNTU_VERSION=""
 # Add and extract this tar file to populate the whole rootfs of this container
-ADD rootfs-${VERSION}.tar /
+ADD rootfs-${UBUNTU_VERSION}.tar /
 # Copy the /kernel directory which was present in the first stage of this multi-stage build and extract the contents
 COPY --from=0 /kernel /kernel
 RUN tar -xf /kernel/modules.tar -C / --remove-files && \
@@ -46,7 +46,7 @@ RUN mkdir -p /etc/systemd/system/sockets.target.wants /etc/systemd/system/networ
 
 # Add the sources.list file so that we can customize from where to get packages
 COPY sources.list /etc/apt/
-RUN source /etc/os-release && sed -e "s|UBUNTU_CODENAME|${UBUNTU_CODENAME}|g" -i /etc/apt/sources.list
+RUN sed -e "s|UBUNTU_CODENAME|$(grep UBUNTU_CODENAME /etc/os-release | cut -d= -f2)|g" -i /etc/apt/sources.list
 # Install some utilities, an ssh server and curl, which is needed in most installations
 RUN apt-get update && \
     apt-get -y install --no-install-recommends \

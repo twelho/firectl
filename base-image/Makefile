@@ -1,9 +1,9 @@
-VERSION="18.04"
-REVISION="1"
-TAG="${VERSION}-${REVISION}"
+VERSION=18.04
+REVISION=1
+TAG=${VERSION}-${REVISION}
 REGISTRY=luxas
-KERNEL_VERSION="4.14.55"
-KERNEL_EXTRA=""
+KERNEL_VERSION=4.14.55
+KERNEL_EXTRA=
 
 all: build
 build:
@@ -13,7 +13,7 @@ build:
 	[ -f rootfs-${VERSION}.tar ] || docker run -it --privileged -v $(shell pwd):/out ubuntu:${VERSION} /bin/bash -c "\
 		source /etc/os-release && \
 		apt-get update -y && apt-get install debootstrap -y && \
-		debootstrap --arch=amd64 \${DISTRO} /mnt http://archive.ubuntu.com/ubuntu/ && \
+		debootstrap --arch=amd64 \$$UBUNTU_CODENAME /mnt http://archive.ubuntu.com/ubuntu/ && \
 		cd /mnt && tar -cf /out/rootfs-${VERSION}.tar ."
 	# Build the kernel and the rest of the VM base OS image
 	docker build \
