@@ -58,3 +58,7 @@ RUN apt-get update && \
       curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# The handler in this .bash_profile rescans the terminal size after each
+# command, so tools like less and htop are actually usable in the VM
+COPY .bash_profile /root/
