@@ -1,2 +1,3 @@
 firectl
 base-image/rootfs-*
+*.swp
