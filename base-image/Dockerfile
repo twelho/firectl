@@ -24,7 +24,7 @@ ARG KERNEL_VERSION=""
 ARG KERNEL_EXTRA=""
 ARG UBUNTU_VERSION=""
 # Add and extract this tar file to populate the whole rootfs of this container
-ADD rootfs-${UBUNTU_VERSION}.tar /
+ADD rootfs-${UBUNTU_VERSION}.tar.gz /
 # Copy the /kernel directory which was present in the first stage of this multi-stage build and extract the contents
 COPY --from=0 /kernel /kernel
 RUN tar -xf /kernel/modules.tar -C / --remove-files && \
