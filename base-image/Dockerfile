@@ -50,11 +50,11 @@ RUN sed -e "s|UBUNTU_CODENAME|$(grep UBUNTU_CODENAME /etc/os-release | cut -d= -
 # Install some utilities, an ssh server and curl, which is needed in most installations
 RUN apt-get update && \
     apt-get -y install --no-install-recommends \
-        bash-completion \
-		command-not-found \
-		openssh-server \
-		rng-tools \
-		nano \
-		curl \
+      bash-completion \
+      command-not-found \
+      openssh-server \
+      rng-tools \
+      nano \
+      curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
