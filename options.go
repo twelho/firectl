@@ -76,28 +76,28 @@ type options struct {
 // AddFlags adds the flags for these options to an arbitrary flagset
 func (opts *options) AddFlags(fs *pflag.FlagSet) {
 	// The kernel and attached devices
-	fs.StringVar(&opts.KernelImage, "kernel", "./vmlinux", "Path to a uncompressed kernel image (vmlinux).")
-	fs.StringVar(&opts.KernelCmdLine, "kernel-opts", DefaultKernelOpts, "The kernel commandline")
-	fs.StringVar(&opts.RootDrivePath, "root-drive", "", "Path to a root disk image, either a ext4 formatted file or a physical device. Required.")
+	fs.StringVar(&opts.KernelImage, "kernel", "./vmlinux", "Path to a uncompressed kernel image (vmlinux)")
+	fs.StringVar(&opts.KernelCmdLine, "kernel-opts", DefaultKernelOpts, "Specify the VM kernel cmdline")
+	fs.StringVar(&opts.RootDrivePath, "root-drive", "", "Path to a root disk image, either a ext4 formatted file or a physical device (required)")
 	fs.StringVar(&opts.RootPartUUID, "root-partition", "", "Root partition UUID")
-	fs.StringSliceVar(&opts.AdditionalDrives, "add-drive", nil, "Path to an additional drive, suffixed with :ro or :rw. Can be specified multiple times")
-	fs.StringSliceVar(&opts.NICConfigs, "add-network", nil, "Create a tap adapter on the host, connect it to ethX in the VM and possibly a bridge on the host. Specified as HOST_BRIDGE/HOST_TAP/GUEST_MAC, HOST_TAP/GUEST_MAC or just HOST_BRIDGE. Defaults to random HOST_TAP/GUEST_MAC. Can be specified multiple times")
-	fs.StringSliceVar(&opts.VsockDevices, "vsock-device", nil, "<Experimental> Vsock interface, specified as PATH:CID. Can be specified multiple times")
+	fs.StringSliceVar(&opts.AdditionalDrives, "add-drive", nil, "Path to an additional drive, suffixed with :ro or :rw, can be specified multiple times")
+	fs.StringSliceVar(&opts.NICConfigs, "add-network", nil, "Create a tap adapter on the host, connect it to ethX in the VM and possibly a bridge on the host. Specified as HOST_BRIDGE/HOST_TAP/GUEST_MAC, HOST_TAP/GUEST_MAC or just HOST_BRIDGE. Defaults to random HOST_TAP/GUEST_MAC. Can be specified multiple times.")
+	fs.StringSliceVar(&opts.VsockDevices, "vsock-device", nil, "<Experimental> VSOCK interface, specified as PATH:CID, can be specified multiple times")
 	// The machine specification
-	fs.Int64VarP(&opts.CPUCount, "cpus", "c", DefaultCPUs, "Number of CPUs")
+	fs.Int64VarP(&opts.CPUCount, "cpus", "c", DefaultCPUs, "Number of VM CPUs")
 	fs.StringVar(&opts.CPUTemplate, "cpu-template", "", "Firecracker CPU Template (only C3 or T2 supported at the moment)")
 	fs.Int64VarP(&opts.Memory, "memory", "m", DefaultMemory, "VM RAM memory, in MiB")
 	// Runtime options
-	fs.StringVar(&opts.Binary, "firecracker-binary", "", "Path to the firecracker binary. By default: Find it in $PATH")
+	fs.StringVar(&opts.Binary, "firecracker-binary", "", "Path to the firecracker binary, searches $PATH for it by default")
 	fs.BoolVarP(&opts.EnableHyperthreading, "enable-hyperthreading", "t", true, "Enable CPU Hyperthreading")
-	fs.StringVarP(&opts.SocketPath, "socket-path", "s", "", fmt.Sprintf("Path to use for firecracker socket. Defaults to %s/{name}/firecracker.sock", RuntimeDir))
+	fs.StringVarP(&opts.SocketPath, "socket-path", "s", "", fmt.Sprintf("Path to use for firecracker socket, defaults to %s/{name}/firecracker.sock", RuntimeDir))
 	fs.StringVar(&opts.Metadata, "metadata", "", "Metadata specified as raw JSON for MMDS")
-	fs.StringVar(&opts.Name, "name", "", "Set a name for the VM. By default a randomly-generated 8 char string")
-	fs.StringSliceVar(&opts.CopyFiles, "copy-files", nil, "Copy files from the host to the guest (e.g. SSH keys, network config files, etc.). Can be specified multiple times")
+	fs.StringVar(&opts.Name, "name", "", "Set a name for the VM, uses a randomly-generated 8 character string if unspecified")
+	fs.StringSliceVar(&opts.CopyFiles, "copy-files", nil, "Copy files from the host to the guest (e.g. SSH keys, network config files, etc.), can be specified multiple times")
 	// Logging options
-	fs.StringVarP(&opts.FifoLogFile, "vmm-log-file", "l", "", fmt.Sprintf("Pipes the VMM fifo log to the specified file. Mutually exclusive with --vmm-log-fifo. By default the file is written to %s/{name}/vmm.log", RuntimeDir))
-	fs.StringVar(&opts.LogFifo, "vmm-log-fifo", "", "Point to a fifo for firecracker logs. Mutually exclusive with --vmm-log-file. By default the log file is used")
-	fs.StringVar(&opts.MetricsFifo, "metrics-fifo", "", fmt.Sprintf("Point to a fifo for firecracker metrics. By default a new fifo is created in %s/{name}/metrics.fifo", RuntimeDir))
+	fs.StringVarP(&opts.FifoLogFile, "vmm-log-file", "l", "", fmt.Sprintf("Pipes the VMM fifo log to the specified file, mutually exclusive with --vmm-log-fifo, by default the file is written to %s/{name}/vmm.log", RuntimeDir))
+	fs.StringVar(&opts.LogFifo, "vmm-log-fifo", "", "Specify a FIFO for firecracker logs, mutually exclusive with --vmm-log-file, by default the log file is used")
+	fs.StringVar(&opts.MetricsFifo, "metrics-fifo", "", fmt.Sprintf("Specify a fifo for firecracker metrics, by default a new fifo is created in %s/{name}/metrics.fifo", RuntimeDir))
 	fs.StringVar(&opts.LogLevel, "log-level", DefaultLogLevel, "Set the log level for both firectl and firecracker")
 }
 
