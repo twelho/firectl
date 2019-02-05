@@ -69,7 +69,8 @@ type options struct {
 	FifoLogFile          string
 	SocketPath           string
 	Name                 string
-	CopyFiles            []string
+	CopyFilesTo          []string
+	CopyFilesFrom        []string
 	cleanupFns           []func() error
 }
 
@@ -93,7 +94,8 @@ func (opts *options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVarP(&opts.SocketPath, "socket-path", "s", "", fmt.Sprintf("Path to use for firecracker socket, defaults to %s/{name}/firecracker.sock", RuntimeDir))
 	fs.StringVar(&opts.Metadata, "metadata", "", "Metadata specified as raw JSON for MMDS")
 	fs.StringVar(&opts.Name, "name", "", "Set a name for the VM, uses a randomly-generated 8 character string if unspecified")
-	fs.StringSliceVar(&opts.CopyFiles, "copy-files", nil, "Copy files from the host to the guest (e.g. SSH keys, network config files, etc.), can be specified multiple times")
+	fs.StringSliceVar(&opts.CopyFilesTo, "copy-to", nil, "Copy files from the host to the guest in the form of HOST:GUEST (e.g. SSH keys, network config files, etc.), can be specified multiple times")
+	fs.StringSliceVar(&opts.CopyFilesFrom, "copy-from", nil, "Copy files from the guest to the host in the form of HOST:GUEST (e.g. SSH keys, network config files, etc.), can be specified multiple times")
 	// Logging options
 	fs.StringVarP(&opts.FifoLogFile, "vmm-log-file", "l", "", fmt.Sprintf("Pipes the VMM fifo log to the specified file, mutually exclusive with --vmm-log-fifo, by default the file is written to %s/{name}/vmm.log", RuntimeDir))
 	fs.StringVar(&opts.LogFifo, "vmm-log-fifo", "", "Specify a FIFO for firecracker logs, mutually exclusive with --vmm-log-file, by default the log file is used")
@@ -254,7 +256,8 @@ func (opts *options) ToVMM() (*VMM, error) {
 		cfg:           cfg,
 		metadata:      metadata,
 		fifoLogFile:   opts.FifoLogFile,
-		copyFiles:     opts.CopyFiles,
+		copyFilesTo:   opts.CopyFilesTo,
+		copyFilesFrom: opts.CopyFilesFrom,
 		cleanupFns:    opts.cleanupFns, // inherit the cleanup funcs that were registered here
 	}, nil
 }

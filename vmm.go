@@ -34,7 +34,8 @@ type VMM struct {
 	cfg           firecracker.Config
 	metadata      interface{}
 	fifoLogFile   string
-	copyFiles     []string
+	copyFilesTo   []string
+	copyFilesFrom []string
 	cleanupFns    []func() error
 }
 
@@ -47,7 +48,7 @@ func (vmm *VMM) Run(ctx context.Context) error {
 		return err
 	}
 
-	if err := vmm.copyFilesFromHost(); err != nil {
+	if err := vmm.copyFiles(); err != nil {
 		return err
 	}
 
@@ -154,7 +155,7 @@ func (vmm *VMM) createRuntimeDir() error {
 	return os.MkdirAll(vmdir, 0755)
 }
 
-func (vmm *VMM) copyFilesFromHost() error {
+func (vmm *VMM) copyFiles() error {
 	mntdir := filepath.Join(RuntimeDir, vmm.name, "mnt")
 	if err := os.MkdirAll(mntdir, 0755); err != nil {
 		return err
@@ -162,13 +163,32 @@ func (vmm *VMM) copyFilesFromHost() error {
 	if err := executeCommand("mount", vmm.rootDrivePath, mntdir); err != nil {
 		return err
 	}
-	for _, filePair := range vmm.copyFiles {
+	for _, filePair := range vmm.copyFilesTo {
 		files := strings.Split(filePair, ":")
 		if len(files) != 2 {
-			return errors.Errorf("--copy-files arguments must be of the form SOURCE:TARGET")
+			return errors.Errorf("--copy-to arguments must be of the form SOURCE:TARGET")
 		}
 		src := files[0]
 		dest := filepath.Join(mntdir, files[1])
+		destDir := filepath.Dir(dest)
+		if _, err := os.Stat(destDir); os.IsNotExist(err) {
+			if err := os.MkdirAll(destDir, 755); err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		}
+		if err := executeCommand("cp", src, dest); err != nil {
+			return err
+		}
+	}
+	for _, filePair := range vmm.copyFilesFrom {
+		files := strings.Split(filePair, ":")
+		if len(files) != 2 {
+			return errors.Errorf("--copy-from arguments must be of the form TARGET:SOURCE")
+		}
+		dest := files[0]
+		src := filepath.Join(mntdir, files[1])
 		destDir := filepath.Dir(dest)
 		if _, err := os.Stat(destDir); os.IsNotExist(err) {
 			if err := os.MkdirAll(destDir, 755); err != nil {
