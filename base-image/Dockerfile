@@ -24,7 +24,7 @@ ARG KERNEL_VERSION=""
 ARG KERNEL_EXTRA=""
 ARG UBUNTU_VERSION=""
 # Add and extract this tar file to populate the whole rootfs of this container
-ADD rootfs-${UBUNTU_VERSION}.tar /
+ADD rootfs-${UBUNTU_VERSION}.tar.gz /
 # Copy the /kernel directory which was present in the first stage of this multi-stage build and extract the contents
 COPY --from=0 /kernel /kernel
 RUN tar -xf /kernel/modules.tar -C / --remove-files && \
@@ -50,7 +50,15 @@ RUN sed -e "s|UBUNTU_CODENAME|$(grep UBUNTU_CODENAME /etc/os-release | cut -d= -
 # Install some utilities, an ssh server and curl, which is needed in most installations
 RUN apt-get update && \
     apt-get -y install --no-install-recommends \
-        openssh-server \
-        curl \
+      bash-completion \
+      command-not-found \
+      openssh-server \
+      rng-tools \
+      nano \
+      curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# The handler in this .bash_profile rescans the terminal size after each
+# command, so tools like less and htop are actually usable in the VM
+COPY .bash_profile /root/
