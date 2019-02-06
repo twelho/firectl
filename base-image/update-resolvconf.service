@@ -1,0 +1,11 @@
+# Enable resolving using systemd-resolved, this way we can input DNS servers
+# via systemd-networkd in the .network configuration files
+
+[Unit]
+Description=/etc/resolv.conf symlink updating service
+
+[Service]
+ExecStart=/bin/ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+
+[Install]
+WantedBy=multi-user.target
